@@ -468,7 +468,7 @@ def load_bedgraphs_and_call_peaks(in_dir, output_filename='all_peaks.txt',
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(
-        description='''Call peaks in FOG-3 data for DESeq2 comparison.''')
+        description='''Peak calling tools.''')
     parser.add_argument(
         '-b', '--bedgraph', default='wig/',
         help='''Folder of bedgraph files of raw coverage data.'''
