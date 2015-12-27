@@ -1,6 +1,8 @@
 Peak calling by CWT and subsequent filtering
 ========
 
+Not cleaned up or documented yet.
+
 An experimental method of CLIP-seq peak calling.
 Peak-shaped bits of signal are highlighted by scipy's CWT.
 Various control methods are then applied to create different peak lists.
