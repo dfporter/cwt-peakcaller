@@ -8,7 +8,7 @@ Various control methods are then applied to create different peak lists.
 Uses one gtf library file, bed files of reads for negative controls (a minimum of a negative IP and an RNA-seq dataset), CLIP bed files and CLIP bedgraph files.
 Paths to files are defined in a config file.
 
-testbed/, testwigs/ and configfile are example input files.
+testbed/, testwigs/, lib/mtdna.gtf and configfile are example input files.
 
 Example: ::
 

@@ -101,7 +101,7 @@ def combine_peaks_not_pandas(replicates, min_num_reps=1, output_dir='peaks/',
                 vennreps[tuple(sorted(repnames))],
             ],
             set_labels=tuple(repnames))
-        plt.savefig('%shmm.pdf' % label, format='pdf')
+        plt.savefig('%s_replicate_overlap.pdf' % label, format='pdf')
         plt.clf()
         plt.close()
     return overlapping_peak_rows
