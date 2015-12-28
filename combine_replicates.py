@@ -6,31 +6,27 @@ import glob
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize_scalar
-#import pysam
 import matplotlib
 import sys
 from matplotlib_venn import *
 import os
 import logging
 import HTSeq
-#from subset_peaks_with_fbe import *
-#from peak_locations import locate_in_gene, get_distance
+import collections
 
 logger = logging.getLogger(__name__)
 
 
-def combine_peaks_not_pandas(replicates, min_num_reps=1):
+def combine_peaks_not_pandas(replicates, min_num_reps=1, output_dir='peaks/',
+                             tag=None, one_experiment=True):
     """ Finds overlapping peaks in a dataframe.
     Input: A dataframe of peaks.
     Returns: A dict by gene name of lists, each element containing
            the highest peak range in a given set of overlapping peaks.
     """
-    combined = {}
-    genes = []
     # Convert to a list of dicts.
     reps = {}
     for rep in replicates:
-        if not re.search('fbf1', rep): continue
         reps[rep] = []
         for row in replicates[rep].itertuples():
             reps[rep].append(dict(
@@ -48,87 +44,41 @@ def combine_peaks_not_pandas(replicates, min_num_reps=1):
     for rep in reps:
         genes.extend([x['gene_name'] for x in reps[rep]])
     genes = set(genes)
-    overlaps = {}
     overlapping_peak_rows = {}
-    import collections
     replicate_target_sets = {
-        'fbf1': collections.defaultdict(dict),
-        'fbf2': collections.defaultdict(dict)}
+        'all': collections.defaultdict(dict)}
     for index, gene in enumerate(genes):
         # Get the ranges of peaks targeting this gene, by name.
         _ranges = get_ranges_not_pandas(by_gene, gene)
-        if gene == 'C41C4.20':
-            print _ranges
         overlapping = get_overlapping_not_pandas(
             _ranges, gene, min_num_reps=min_num_reps)
-        if gene == 'C41C4.20':
-            print "overlapping:"
-            for g in overlapping:
-                print "*"
-                print g
-                print ":"
-                print overlapping[g]
         for peak_list in overlapping.values():
-            fbf1_set = set([x[0] for x in peak_list if re.search('fbf1', x[0])])
-            fbf2_set = set([x[0] for x in peak_list if re.search('fbf2', x[0])])
-            replicate_target_sets['fbf1'].setdefault(gene, [])
-            replicate_target_sets['fbf1'][gene].append(fbf1_set)
-            replicate_target_sets['fbf2'].setdefault(gene, [])
-            replicate_target_sets['fbf2'][gene].append(fbf2_set)
-        replicate_target_sets['fbf1'][gene] = sorted(
-            replicate_target_sets['fbf1'][gene],
-            key=lambda x: len(x))
-        largest_overlap_fbf1 = replicate_target_sets['fbf1'][gene][-1]
-        replicate_target_sets['fbf1'][gene] = replicate_target_sets['fbf1'][gene][-1]
-        replicate_target_sets['fbf2'][gene] = sorted(
-            replicate_target_sets['fbf2'][gene],
-            key=lambda x: len(x))
-        largest_overlap_fbf2 = replicate_target_sets['fbf2'][gene][-1]
-        replicate_target_sets['fbf2'][gene] = replicate_target_sets['fbf2'][gene][-1]
+            a_set = set([x[0] for x in peak_list])
+            replicate_target_sets['all'].setdefault(gene, [])
+            replicate_target_sets['all'][gene].append(a_set)
+        replicate_target_sets['all'][gene] = sorted(
+            replicate_target_sets['all'][gene],
+            key=lambda x: len(x))[-1]
         # Alters overlapping to remove shorter peaks that overlap
         # with higher peaks.
         remove_peaks_that_overlap_with_higher_peak(overlapping, _ranges)
-        if gene == 'C41C4.20':
-            for fn in overlapping:
-                print "after removal"
-                print fn
         overlapping_peak_rows[gene] = []
         for peak_name in overlapping:
             overlapping_peak_rows[gene].append(_ranges[peak_name[0]][peak_name])
-        if gene == 'C41C4.20':
-            print "{g}: {n_s}\n{o}".format(
-                g=gene, n_s=len(overlapping_peak_rows[gene]),
-                o=overlapping_peak_rows[gene]
-            )
-            print replicate_target_sets['fbf1'][gene]
-            print replicate_target_sets['fbf2'][gene]
-    for fbf in ['fbf1']:#, 'fbf2']:
-        repnames = [x for x in reps.keys() if re.search(fbf, x)]
+    for label in ['all']:
+        repnames = reps.keys()
         vennreps = collections.defaultdict(int)
-        for gene in replicate_target_sets[fbf]:
-            if gene == 'C41C4.20':
-                print gene
-                print replicate_target_sets[fbf][gene]
-            if len(replicate_target_sets[fbf][gene]) > 1:
+        for gene in replicate_target_sets[label]:
+            if len(replicate_target_sets[label][gene]) > 1:
                 tup_of_reps = [
-                    x for x in replicate_target_sets[fbf][gene]]
+                    x for x in replicate_target_sets[label][gene]]
                 tup_of_reps = tuple(sorted(tup_of_reps))
                 vennreps[tup_of_reps] += 1
-            elif len(replicate_target_sets[fbf][gene]) == 1:
-                vennreps[list(replicate_target_sets[fbf][gene])[0]] += 1
+            elif len(replicate_target_sets[label][gene]) == 1:
+                vennreps[list(replicate_target_sets[label][gene])[0]] += 1
             else:
                 pass
-        comb_fbf = pandas.read_csv('methods/filtered_gauss_same_n2_nil_01/combined_%s.txt' % fbf, sep='\t')
-        in_three = set(
-            [gene for gene in replicate_target_sets[fbf] if len(replicate_target_sets[fbf][gene]) == 3]
-        )
-        missing = set(comb_fbf['gene_name'].tolist()) - in_three
-        extra = in_three - set(comb_fbf['gene_name'].tolist())
-        print 'missing'
-        print missing
-        print 'extra'
-        print extra
-                # print replicate_target_sets[fbf][gene]
+        if not os.path.exists(output_dir): os.system('mkdir ' + output_dir)
         plt.clf()
         subsets=[
                 # Unique to repnames[0]
@@ -139,8 +89,6 @@ def combine_peaks_not_pandas(replicates, min_num_reps=1):
                 vennreps[tuple(sorted([repnames[0], repnames[2]]))],
                 vennreps[tuple(sorted([repnames[1], repnames[2]]))],
                 vennreps[tuple(sorted(repnames))]]
-        print subsets
-        print vennreps
         overlaps = venn3(
             subsets=[
                 # Unique to repnames[0]
@@ -153,19 +101,10 @@ def combine_peaks_not_pandas(replicates, min_num_reps=1):
                 vennreps[tuple(sorted(repnames))],
             ],
             set_labels=tuple(repnames))
-        plt.savefig('%shmm.pdf' % fbf, format='pdf')
+        plt.savefig('%shmm.pdf' % label, format='pdf')
         plt.clf()
         plt.close()
     return overlapping_peak_rows
-"""
-tccg 14599930-14600091 *
-gcca 14600006-14600086 *
-aacc 14599934-14600090 *
-fbf2
-gcca 14600016-14600082 *
-tccg 14600013-14600085 *
-aacc 14600027-14600073 *
-"""
 
 
 def consensus_peaks_not_pandas(overlapping, gene_ranges):
@@ -300,13 +239,13 @@ if __name__ == '__main__':
     top_level_dir = sys.argv[1]
     replicates = {}
     col_order = []
-    for filename in glob.glob(top_level_dir + '/fbf*.txt'):
+    for filename in glob.glob(top_level_dir + '/*.txt'):
         replicates[filename] = pandas.read_csv(filename, sep='\t')
         col_order = replicates[filename].columns
     peak_rows_by_gene = combine_peaks_not_pandas(replicates)
     out_dir = top_level_dir.rstrip('/') #+ '_five_reps/'
     if not os.path.exists(out_dir): os.system('mkdir ' + out_dir)
-    write_combined_not_pandas(peak_rows_by_gene, out_dir + '/new_combined_fbf.txt', col_order)
+    write_combined_not_pandas(peak_rows_by_gene, out_dir + '/combined.txt', col_order)
     sys.exit()
 
 

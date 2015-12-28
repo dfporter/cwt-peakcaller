@@ -40,6 +40,9 @@ class peak:
     def local_poisson(self, bamfiles, norm_factors):
         mean_local = {}
         for bamfile in bamfiles:
+            if len(self.local[bamfile]) == 0:
+                self.pvalues['%s_local_poisson' % bamfile] = 1.0
+                continue
             mean_local[bamfile] = float(sum(self.local[bamfile]))/float(
                 len(self.local[bamfile]))
             mean_local[bamfile] *= norm_factors[bamfile]
@@ -93,7 +96,7 @@ class peak:
     def local_nb(self, bedfiles, norm_factors, known=None):
         nb_results = {}
         for bedfile in bedfiles:
-            if bedfile == 'clip':
+            if bedfile == 'clip' or len(self.local[bedfile]) == 0:
                 self.pvalues['%s_local_nb'% bedfile] = 1.
                 nb_results[bedfile] = 1.
                 continue
@@ -128,7 +131,9 @@ class peak:
     def gene_poisson(self, bamfiles, norm_factors):
         mean_gene = {}
         for bamfile in bamfiles:
-            if not hasattr(self, 'exons') or bamfile not in self.exons:
+            if not hasattr(self, 'exons') or (bamfile not in self.exons) or (
+                len(self.exons[bamfile]) == 0
+            ):
                 if not hasattr(self, 'exons'):
                     logger.warn("No exons for %s." % str(self.__dict__))
                 elif bamfile not in self.exons:
@@ -152,7 +157,7 @@ class peak:
 
     def gene_norm(self, bamfiles, norm_factors):
         for bamfile in bamfiles:
-            if not hasattr(self, 'exons') or bamfile not in self.exons:
+            if not hasattr(self, 'exons') or (bamfile not in self.exons):
                 self.gene_norm_mu, self.gene_norm_std = (np.nan, np.nan)
                 self.pvalues['%s_gene_norm' % bamfile] = np.nan
                 continue

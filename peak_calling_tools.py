@@ -266,7 +266,7 @@ def load_bed_file(fname):
             s = line.rstrip('\n').split('\t')
             ga[HTSeq.GenomicInterval(
                 s[0], int(s[1]), int(s[2]), s[5])] += 1
-            if not n % 1e5: print "{i}: {n}".format(i=fname, n=n)
+            if not n % 1e3: print "Loading {i}: on line {n}.".format(i=fname, n=n)
     li = "\tTook %.3f m to read bed file." % float((time.time() - start_time)/60.)
     logger.info(li)
     return ga

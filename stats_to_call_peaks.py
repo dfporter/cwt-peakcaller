@@ -108,6 +108,7 @@ def get_norm_files(bedfile_sizes):
 def read_bedfile_sizes(bedfiles):
     bedfile_sizes = {}
     for bedfile in bedfiles:
+        print 'reading %s' % bedfile
         fname = bedfiles[bedfile]
         plus_file = fname.partition('.wig')[0] + '_+.wig'
         minus_file = fname.partition('.wig')[0] + '_-.wig'
@@ -118,6 +119,8 @@ def read_bedfile_sizes(bedfiles):
 
 def read_bedfile_size_on_strand(fname):
     with open(fname, 'r') as f: wc_out = len(f.readlines())
+    print "*"
+    print wc_out
     return wc_out
 
 

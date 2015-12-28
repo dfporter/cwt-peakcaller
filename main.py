@@ -53,10 +53,12 @@ if __name__ == '__main__':
     args = load_args()
     config = callpeaks.read_config(args.config)
     callpeaks.start_logger(config['experiment_name'])
+    print "Loading gtf..."
     gtf_data = callpeaks.get_gtf(args, config)
     ga_raw = {}
-    # ga_raw['neg_ip'] = peak_calling_tools.load_bed_file(config['neg_ip_filename'])
-    # ga_raw['rna_seq'] = peak_calling_tools.load_bed_file(config['rna_seq_filename'])
+    print "Loading bed files..."
+    ga_raw['neg_ip'] = peak_calling_tools.load_bed_file(config['neg_ip_filename'])
+    ga_raw['rna_seq'] = peak_calling_tools.load_bed_file(config['rna_seq_filename'])
     for clip_replicate in config['clip_replicate']:
         ga_raw[clip_replicate] = peak_calling_tools.load_bed_file(
             config['bed_dir'] + '/' + os.path.basename(clip_replicate).partition('wig')[0] + 'bed')

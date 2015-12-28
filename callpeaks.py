@@ -387,7 +387,10 @@ def load_and_combine_replicates(config):
             logging.info(li)
             print li
         # A dict with key=gene is returned.
-        combined[hyp_num] = combine_replicates.combine_peaks_not_pandas(hyp[hyp_num], min_num_reps=min_rep_number)
+        combined[hyp_num] = combine_replicates.combine_peaks_not_pandas(
+            hyp[hyp_num], min_num_reps=min_rep_number,
+            output_dir='data/{v}/'.format(v=config['experiment_name']),
+            one_experiment=True)
         logging.info("Combined peaks list for hyp number %i comprises %i peaks." % (
             hyp_num, len(combined[hyp_num])
         ))
@@ -517,8 +520,7 @@ def call(args, config, gtf_l, ga_raw, do_start_logger=True):
     logger.info('call(): Finished loading/creating %i cwt tables: %s' % (
         len(peak_tables), str([str(peak_tables[x]) for x in peak_tables])
     ))
-    nb_pvals_local, nb_pvals_gene = (None, None)
-    nb_fits = None
+    nb_pvals_local, nb_pvals_gene, nb_fits = (None, None, None)
     for clip_replicate_filename in peak_tables:
         peak_table = peak_tables[clip_replicate_filename]
         logger.info('call(): Calling add_signal.add_signal_to_replicate for %s' % clip_replicate_filename)
@@ -562,8 +564,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     config = read_config(args.config)
     # Load high RAM data. Slow.
+    print "Loading GTF..."
     gtf_data = get_gtf(args, config)
     ga_raw = {}
+    print "Loading bed files..."
     for clip_replicate in config['clip_replicate']:
         ga_raw[clip_replicate] = peak_calling_tools.load_bed_file(
             config['bed_dir'] + '/' + os.path.basename(clip_replicate).partition('wig')[0] + 'bed')
