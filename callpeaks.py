@@ -5,13 +5,11 @@ import pandas
 import re
 import os
 import glob
-import sys
-import scipy as sp
-from statsmodels.sandbox.stats.multicomp import multipletests
 import argparse
 import logging
 import time
 import datetime
+import collections
 
 import peak_calling_tools
 import combine_replicates
@@ -30,92 +28,6 @@ def start_logger(exp_name):
         level=logging.DEBUG)
     logging.info('Module called %s' % str(time.localtime()))
     return logger
-
-
-# From: http://stackoverflow.com/questions/17118350/how-to-find-nearest-value-that-is-greater-in-numpy-array
-def argfind(array, predicate):
-    for i in xrange(array.shape[0]):
-        if predicate(array[i]):
-            return i
-    return False
-
-
-def find_nearest_below(array, value):
-    return argfind(array, lambda x: x <= value)
-
-
-def find_borders(peak_pos, coverage, chrm, strand):
-    # What are the borders of each peak?
-    peak_objs = []
-    for a_peak_pos in peak_pos:
-        width = 1e3
-        left = max(0, a_peak_pos - width)
-        right = a_peak_pos + width
-        window = HTSeq.GenomicInterval(chrm, left, right, strand)
-        peak_center = HTSeq.GenomicPosition(chrm, a_peak_pos, strand)
-        if coverage[peak_center] < 5:
-            continue
-        wincvg = np.fromiter(coverage[window], dtype='i')
-        cutoff = max(wincvg)*.1
-        rv = wincvg[::-1]
-        left_border = find_nearest_below(rv[1000:], cutoff)
-        right_border = find_nearest_below(wincvg[1000:], cutoff)
-        left_border = a_peak_pos - left_border
-        right_border = a_peak_pos + right_border
-        if left_border == right_border:
-            left_border -= 10
-            right_border += 10
-        peak_obj = peak(chrm, left_border, right_border, strand)
-        window = HTSeq.GenomicInterval(chrm, left_border, right_border, strand)
-        wincvg = np.fromiter(coverage[window], dtype='i')
-        peak_obj.height = int(max(wincvg))
-        if peak_obj.height == 'na':
-            logger.warn("Set a peak height to 'na': %s..." % str(peak_obj.__dict__))
-        peak_objs.append(peak_obj)
-    return peak_objs
-
-        
-# Merge overlapping peaks.
-# From: http://codereview.stackexchange.com/questions/69242/merging-overlapping-intervals
-def merge_overlapping_on_chrm_and_strand(intervals, coverage):
-    """Merge in a given chrom and strand.
-    """
-    sorted_by_lower_bound = sorted(intervals, key=lambda x: x.left)
-    merged = []
-    for higher in sorted_by_lower_bound:
-        if not merged:
-            merged.append(higher)
-        else:
-            lower = merged[-1]
-            # test for intersection between lower and higher:
-            # we know via sorting that lower[0] <= higher[0]
-            if higher.left <= lower.right:
-                upper_bound = int(max(lower.right, higher.right))
-                new_peak = peak(lower.chrm, lower.left, upper_bound, lower.strand)
-                window = HTSeq.GenomicInterval(lower.chrm, lower.left, upper_bound, lower.strand)
-                wincvg = np.fromiter(coverage[window], dtype='i')
-                new_peak.height = int(max(wincvg))
-                merged[-1] = new_peak  # replace by merged interval
-            else:
-                merged.append(higher)
-    return merged
-
-
-def merge_overlapping(intervals):
-    by_chrm = {}
-    merged = {}
-    for apeak in intervals:
-        by_chrm.setdefault(apeak.chrm, {})
-        merged.setdefault(apeak.chrm, {})
-        by_chrm[apeak.chrm].setdefault(apeak.strand, [])
-        merged[apeak.chrm].setdefault(apeak.strand, [])
-        by_chrm[apeak.chrm][apeak.strand].append(apeak)
-    for chrm in by_chrm:
-        for strand in by_chrm[chrm]:
-            merged[chrm][strand] = merge_overlapping_on_chrm_and_strand(by_chrm[chrm][strand])
-            # Check.
-            check_overlap(merged[chrm][strand])
-    return merged
 
 
 def any_have_na(peak_objs):
@@ -223,19 +135,22 @@ clip_replicate\tfilename3.wig
 gtf_filename\tgtf_filename
 rna_seq_filename\tfilename
 neg_ip_filename\tfilename
+positive_control_genes\tname1;name2;name3;
+motif\ttgt\w\w\wat
     """
-    config = {}
+    config = collections.defaultdict(list)
     with open(filename, 'r') as f:
         for li in f:
             li = li.partition('#')[0]  # Skip comments.
             if li == '': continue
             s = li.rstrip('\n').split('\t')
-            config.setdefault(s[0], [])
             try: config[s[0]].append(s[1])
             except: print "Error parsing line %s in config file. Wrong length?" % li
     for key in config:
         if len(config[key]) == 1:
             config[key] = config[key][0]
+        if key == 'positive_control_genes':
+            config[key] = config[key].split(';')
     if 'experiment_name' not in config:
         config['experiment_name'] = os.path.basename(filename)
     return config
@@ -261,15 +176,15 @@ def score_metrics(dir_name, config):
     for filename in glob.glob(dir_name + '/*'):
         fname_list.append(filename)
     li = ""
-    for filename in sorted(fname_list, key=lambda x: int(os.path.basename(x))):
+    for filename in sorted(fname_list, key=lambda x: os.path.basename(x)):
         print "Scoring metrics for %s" % filename
-        li += score_metric(filename)
+        li += score_metric(filename, config=config)
     with open('score_metrics_%s.txt' % config['experiment_name'], 'w') as f:
         f.write(li)
     return li
 
 
-def score_metric(filename, label="", given_peaks=False, peaks=False):
+def score_metric(filename, label="", given_peaks=False, peaks=False, config=None):
     if not label:
         label = os.path.basename(filename)
     if not given_peaks:
@@ -278,28 +193,10 @@ def score_metric(filename, label="", given_peaks=False, peaks=False):
         logger.warn('No peaks in file %s.' % filename)
         return "No peaks."
     get_sequences(peaks)
-    score_binding_site(peaks)
+    score_binding_site(peaks, config=config)
     #run_dreme(peaks, label)
-    positives = score_positives(peaks)
+    positives = score_positives(peaks, config=config)
     return write_metrics(peaks, positives, label)
-
-
-def run_dreme(combined, label):
-    if not os.path.exists('combined_fasta'):
-        os.system('mkdir combined_fasta')
-    fasta_filename = 'combined_fasta/%s.fa' % label
-    as_fasta = ""
-    for index, peak_row in combined.iterrows():
-        start = combined.loc[index, 'left']
-        end = combined.loc[index, 'right']
-        chrm = combined.loc[index, 'chrm']
-        name = combined.loc[index, 'gene_name']
-        name += ":%s:%i:%i" % (chrm, start, end)
-        as_fasta += ">%s\n%s\n" % (name, combined.loc[index, 'seq'])
-    with open(fasta_filename, 'w') as f:
-        f.write(as_fasta)
-    out_dir = 'dreme_results/%s' % label
-    os.system('/home/dp/meme/bin/dreme -e 0.000000001 -p %s -norc -maxk 10 -oc %s' % (fasta_filename, out_dir))
 
 
 def get_sequences(combined):
@@ -326,27 +223,33 @@ Positive controls: {observed}/{expected}
 Missing positives: {missing}
 """.format(label=label,
     df_size=len(peaks), n_genes=len(list(set(peaks['gene_name']))),
-           with_fbe=len(peaks[peaks['has_fbe']==1]),
-           fbe_perc= float(100 * len(peaks[peaks['has_fbe']==1])/len(peaks)),
-           without_fbe=len(peaks[peaks['has_fbe']==0]),
+           with_fbe=len(peaks[peaks['has_motif']==1]),
+           fbe_perc= float(100 * len(peaks[peaks['has_motif']==1])/len(peaks)),
+           without_fbe=len(peaks[peaks['has_motif']==0]),
            observed=positives['number of observed positives'],
            expected=positives['expected'],
            missing=positives['missing positives'])
     return li
 
 
-def score_binding_site(peaks):
+def score_binding_site(peaks, config=None):
+    if config is None or 'motif' not in config:
+        motif = 'tgt\w\w\wat'
+    else:
+        motif = config['motif'].lower()
     for index, peak_row in peaks.iterrows():
-        if re.search('tgt\w\w\wat', peaks.loc[index, 'seq']) is not None:
-            peaks.loc[index, 'has_fbe'] = 1
+        if re.search(motif, peaks.loc[index, 'seq']) is not None:
+            peaks.loc[index, 'has_motif'] = 1
         else:
-            peaks.loc[index, 'has_fbe'] = 0
+            peaks.loc[index, 'has_motif'] = 0
 
 
-def score_positives(peaks):
-    known_pos = set(['gld-1', 'htp-1', 'htp-2', 'mpk-1', 'him-3',
-                         'fbf-1', 'lip-1', 'syp-2', 'fbf-2', 'fog-1',
-                         'fem-3', 'syp-3', 'gld-3', 'fog-3', 'egl-4'])
+def score_positives(peaks, config=None):
+    if config is None or 'positive_control_genes' not in config:
+        return {'observed positives': set([]), 'number of observed positives': 0,
+            'missing positives': set([]), 'number of missing positives': 0,
+            'expected': 0}
+    known_pos = set(config['positive_control_genes'])
     obs_genes = set(peaks['gene_name'])
     obs_pos = known_pos & obs_genes
     missing_pos = known_pos - obs_genes
@@ -359,46 +262,43 @@ def score_positives(peaks):
 
 def load_and_combine_replicates(config):
     combined = {}
-    hyp = {}
+    peaks_by_hypothesis = collections.defaultdict(dict)
     rep_dir_names = [
         "%s/peaks/%s/" % (config['experiment_name'], os.path.splitext(os.path.basename(rep_bam_path))[0]) for rep_bam_path in config['clip_replicate']]
     logging.info('After calling peaks and doing statistics, \
     replicates are loaded to be combined, from directory names: %s' % str(rep_dir_names))
-    all_hyp_nums = set()
+    all_hypothesis = set()
     if 'min_rep_number' in config:
         min_rep_number = int(config['min_rep_number'])
     else:
         min_rep_number = 3
     for rep_name in rep_dir_names:
-        for hyp_num in range(1, len(glob.glob(rep_name + '/*')) + 2):
-            filename = '%s/null_hyp_%i.txt' % (rep_name, hyp_num)
-            if os.path.exists(filename):
-                all_hyp_nums |= set([hyp_num])
-    for hyp_num in all_hyp_nums:
-        hyp[hyp_num] = {}
+        for filename in glob.glob(rep_name + '/*.txt'):
+            all_hypothesis |= set([os.path.basename(filename)])
+    for hypothesis in all_hypothesis:
         for rep_name in rep_dir_names:
-            filename = '%s/null_hyp_%i.txt' % (rep_name, hyp_num)
+            filename = '%s/%s' % (rep_name, hypothesis)
             if not os.path.exists(filename):
                 logger.error('Missing peaks filename %s' % filename)
                 continue
-            hyp[hyp_num][rep_name] = get_peaks(filename)
-            li = "Peaks list %s for hyp number %i comprises %i peaks." % (
-                filename, hyp_num, len(hyp[hyp_num][rep_name]))
+            peaks_by_hypothesis[hypothesis][rep_name] = get_peaks(filename)
+            li = "Peaks list %s for hypothesis %s comprises %i peaks." % (
+                filename, hypothesis, len(peaks_by_hypothesis[hypothesis][rep_name]))
             logging.info(li)
             print li
         # A dict with key=gene is returned.
-        combined[hyp_num] = combine_replicates.combine_peaks_not_pandas(
-            hyp[hyp_num], min_num_reps=min_rep_number,
+        combined[hypothesis] = combine_replicates.combine_peaks_not_pandas(
+            peaks_by_hypothesis[hypothesis], min_num_reps=min_rep_number,
             output_dir='data/{v}/'.format(v=config['experiment_name']),
             one_experiment=True)
-        logging.info("Combined peaks list for hyp number %i comprises %i peaks." % (
-            hyp_num, len(combined[hyp_num])
+        logging.info("Combined peaks list for hypothesis %s comprises %i peaks." % (
+            hypothesis, len(combined[hypothesis])
         ))
         all_rows = []
-        for gene in combined[hyp_num]:
-            all_rows.extend(combined[hyp_num][gene])
-        combined[hyp_num] = pandas.DataFrame(all_rows)
-        write_combined(combined[hyp_num], str(hyp_num), config)
+        for gene in combined[hypothesis]:
+            all_rows.extend(combined[hypothesis][gene])
+        combined[hypothesis] = pandas.DataFrame(all_rows)
+        write_combined(combined[hypothesis], str(hypothesis), config)
     return combined
 
 

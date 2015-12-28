@@ -9,3 +9,5 @@ gtf_filename	lib/mtdna.gtf
 #gtf_filename_noheader	lib/Caenorhabditis_elegans.WBcel235.78.noheader.gtf
 neg_ip_filename	testbed/negativeip.bed
 rna_seq_filename	testbed/rnaseq.bed
+positive_control_genes	gld-1;htp-1;htp-2;mpk-1;him-3;fbf-1;lip-1;syp-2;fbf-2;fog-1;fem-3;syp-3;gld-3;fog-3;egl-4
+motif	tgt\w\w\wat
