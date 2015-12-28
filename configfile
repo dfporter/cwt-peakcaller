@@ -1,0 +1,11 @@
+experiment_name	test
+min_rep_number	1
+clip_replicate	testwigs/test_aacc.wig
+clip_replicate	testwigs/test_gcca.wig
+clip_replicate	testwigs/test_tccg.wig
+bed_dir	testbed/
+#gtf_filename	lib/gtf_with_names_column.txt
+gtf_filename	lib/mtdna.gtf
+#gtf_filename_noheader	lib/Caenorhabditis_elegans.WBcel235.78.noheader.gtf
+neg_ip_filename	testbed/negativeip.bed
+rna_seq_filename	testbed/rnaseq.bed
