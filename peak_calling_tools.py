@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 def find_peaks(coverage, chrm='I', strand='+', config=None,
                use_raw_height_not_cwt=0):
-    print 'Highlighting by CWT...:'
     if config is not None and 'cwt_params' in config:
         params = config['cwt_params']
         (low_w, high_w, step_w, noise_perc) = params.split(':')
@@ -57,8 +56,7 @@ def find_peaks(coverage, chrm='I', strand='+', config=None,
         coverage[HTSeq.GenomicInterval(chrm, 0, min([1e6, last_value -1]), strand)],
         dtype=np.float
     ))
-    print "max in first 1e6 bp: " + str(f_max)
-    logger.info('Max Coverage in first 1e6 bp %f' % float(f_max))
+    logger.info('Max coverage in first 1e6 bp %f' % float(f_max))
     if f_max < 5:
         logger.warning('Low coverage!')
     for start in range(0, last_value, int(width)):
@@ -259,14 +257,13 @@ def load_bed_file(fname):
     #ga = HTSeq.GenomicArrayOfSets(chroms='auto', stranded=True)
     ga = HTSeq.GenomicArray(chroms='auto', stranded=True)
 #    os.system('wc -l {c} > tmp'.format(c=fname))
-    with open(fname, 'r') as f: print len(f.readlines())
     start_time = time.time()
     with open(fname, 'r') as f:
         for n, line in enumerate(f):
             s = line.rstrip('\n').split('\t')
             ga[HTSeq.GenomicInterval(
                 s[0], int(s[1]), int(s[2]), s[5])] += 1
-            if not n % 1e3: print "Loading {i}: on line {n}.".format(i=fname, n=n)
+            if not n % 1e3: print "Loading {i}: line {n}.".format(i=fname, n=n)
     li = "\tTook %.3f m to read bed file." % float((time.time() - start_time)/60.)
     logger.info(li)
     return ga

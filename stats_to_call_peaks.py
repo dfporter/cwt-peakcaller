@@ -119,8 +119,6 @@ def read_bedfile_sizes(bedfiles):
 
 def read_bedfile_size_on_strand(fname):
     with open(fname, 'r') as f: wc_out = len(f.readlines())
-    print "*"
-    print wc_out
     return wc_out
 
 
@@ -142,7 +140,6 @@ def fdr_correction(config, peak_table, clip_replicate_filename, alpha=0.01):
             fdrs["%s_local_poisson" % bamfile][0], index=peak_table.index)
         peak_table["%s_local_poisson_cor" % bamfile] = pandas.Series(
             fdrs["%s_local_poisson" % bamfile][1], index=peak_table.index)
-        print sorted(peak_table["%s_local_poisson_cor" % bamfile].tolist())[-10:]
         # Gene Poisson (only use CLIP).
         fdrs["%s_gene_poisson" % bamfile] = multipletests(peak_table["%s_gene_poisson" % bamfile].astype(float),
                                       alpha=alpha, method='fdr_bh')
@@ -199,8 +196,6 @@ def evaluate_hypothesis(peak_table, clip_bed_filename, config, alpha=0.01):
 #    with open(replicate_dir + '/%s' % (config['experiment_name'], label), 'w') as f:
 #        combined.to_csv(f, sep='\t')
     # Null hypothesis 2: Signal is not a local peak relative to itself.
-    print "*" * 14
-    print "before %i" % len(peak_table['gene_name'])
     sub = peak_table[peak_table['clip_local_poisson_cor']<alpha]
     sub.to_csv('%s/null_hyp_2.txt' % replicate_dir, sep='\t')
     # Null hypothesis 3: Signal is not a peak relative to CLIP signal in the gene.
@@ -212,13 +207,6 @@ def evaluate_hypothesis(peak_table, clip_bed_filename, config, alpha=0.01):
     sub.to_csv('%s/null_hyp_4.txt' % replicate_dir, sep='\t')
     before = sorted(peak_table['neg_ip_local_norm_cor'].tolist())
     after = sorted(sub['neg_ip_local_norm_cor'].tolist())
-    print before[-100:]
-    print after[-100:]
-    print len(before)
-    print len(after)
-    print "after %i" % len(sub['gene_name'])
-    print 'fdr %f' % alpha
-    print "####"
 
     # Null hypothesis 5: Signal is not enriched relative to the negative for the gene.
     sub = peak_table[peak_table['neg_ip_gene_norm_cor']<alpha]

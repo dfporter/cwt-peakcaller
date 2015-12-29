@@ -171,7 +171,6 @@ def rc(s):
 
 
 def score_metrics(dir_name, config):
-    print "score_metrics(): given %s directory." % dir_name
     fname_list = []
     for filename in glob.glob(dir_name + '/*'):
         fname_list.append(filename)
@@ -282,8 +281,8 @@ def load_and_combine_replicates(config):
                 logger.error('Missing peaks filename %s' % filename)
                 continue
             peaks_by_hypothesis[hypothesis][rep_name] = get_peaks(filename)
-            li = "Peaks list %s for hypothesis %s comprises %i peaks." % (
-                filename, hypothesis, len(peaks_by_hypothesis[hypothesis][rep_name]))
+            li = "Peaks list %s comprises %i peaks." % (
+                filename, len(peaks_by_hypothesis[hypothesis][rep_name]))
             logging.info(li)
             print li
         # A dict with key=gene is returned.
@@ -313,10 +312,10 @@ def write_combined(combined, label, config):
         os.system('mkdir ' + config['experiment_name'])
     if not os.path.exists(out_dir):
         os.system('mkdir ' + out_dir)
-    if not os.path.exists('combined'):
-        os.system('mkdir ' + out_dir + 'combined_%s/' % config['experiment_name'])
-    with open(out_dir + 'combined_%s/%s' % (config['experiment_name'], label), 'w') as f:
-        combined.to_csv(f, sep='\t')
+    out_dir += 'combined_%s/' % config['experiment_name']
+    if not os.path.exists(out_dir):
+        os.system('mkdir ' + out_dir)
+    combined.to_csv(out_dir + label, sep='\t')
 
 
 def to_list(pob):
