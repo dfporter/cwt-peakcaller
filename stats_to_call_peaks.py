@@ -20,7 +20,7 @@ _verbose = True
 
 def do_statistics(
         peak_objs, config, clip_replicate_filename,
-        nb_fits=None):
+        nb_fits=None, skip_nb=False):
     bedfiles = {
             'clip': config['bed_dir'] + '/' + os.path.basename(clip_replicate_filename).partition('wig')[0] + 'bed',
             'rna_seq': config['rna_seq_filename'],
@@ -46,12 +46,12 @@ def do_statistics(
         peak.find_max_bin()
         peak.local_poisson(bedfiles, norm_factors)
         peak.local_norm(bedfiles, norm_factors)
-        res = peak.local_nb(bedfiles, norm_factors, known=nb_fits)
+        res = peak.local_nb(bedfiles, norm_factors, known=nb_fits, skip=skip_nb)
         for key in res:
             nb_pvals_local[key].append(res[key])
         peak.gene_poisson(bedfiles, norm_factors)
         peak.gene_norm(bedfiles, norm_factors)
-        res = peak.gene_nb(bedfiles, norm_factors, known=nb_fits)
+        res = peak.gene_nb(bedfiles, norm_factors, known=nb_fits, skip=skip_nb)
         for key in res:
             nb_pvals_gene[key].append(res[key])
         if not n % 1e2:
@@ -154,13 +154,6 @@ def fdr_correction(config, peak_table, clip_replicate_filename, alpha=0.01):
             fdrs["%s_local_norm" % bamfile][0], index=peak_table.index)
         peak_table["%s_local_norm_cor" % bamfile] = pandas.Series(
             fdrs["%s_local_norm" % bamfile][1], index=peak_table.index)
-        # Local negative binomial.
-        fdrs["%s_local_nb" % bamfile] = multipletests(peak_table["%s_local_nb" % bamfile].astype(float),
-                                      alpha=alpha, method='fdr_bh')
-        peak_table["%s_local_nb_rej" % bamfile] = pandas.Series(
-            fdrs["%s_local_nb" % bamfile][0], index=peak_table.index)
-        peak_table["%s_local_nb_cor" % bamfile] = pandas.Series(
-            fdrs["%s_local_nb" % bamfile][1], index=peak_table.index)
         # Gene normal.
         fdrs["%s_gene_norm" % bamfile] = multipletests(peak_table["%s_gene_norm" % bamfile].astype(float),
                                       alpha=alpha, method='fdr_bh')
@@ -168,14 +161,23 @@ def fdr_correction(config, peak_table, clip_replicate_filename, alpha=0.01):
             fdrs["%s_gene_norm" % bamfile][0], index=peak_table.index)
         peak_table["%s_gene_norm_cor" % bamfile] = pandas.Series(
             fdrs["%s_gene_norm" % bamfile][1], index=peak_table.index)
-        # Gene negative binomial.
-        fdrs["%s_gene_nb" % bamfile] = multipletests(peak_table["%s_gene_nb" % bamfile].astype(float),
-                                      alpha=alpha, method='fdr_bh')
-        peak_table["%s_gene_nb_rej" % bamfile] = pandas.Series(
-            fdrs["%s_gene_nb" % bamfile][0], index=peak_table.index)
-        peak_table["%s_gene_nb_cor" % bamfile] = pandas.Series(
-            fdrs["%s_gene_nb" % bamfile][1], index=peak_table.index)
-
+        try:
+            # Local negative binomial.
+            fdrs["%s_local_nb" % bamfile] = multipletests(peak_table["%s_local_nb" % bamfile].astype(float),
+                                          alpha=alpha, method='fdr_bh')
+            peak_table["%s_local_nb_rej" % bamfile] = pandas.Series(
+                fdrs["%s_local_nb" % bamfile][0], index=peak_table.index)
+            peak_table["%s_local_nb_cor" % bamfile] = pandas.Series(
+                fdrs["%s_local_nb" % bamfile][1], index=peak_table.index)
+            # Gene negative binomial.
+            fdrs["%s_gene_nb" % bamfile] = multipletests(peak_table["%s_gene_nb" % bamfile].astype(float),
+                                          alpha=alpha, method='fdr_bh')
+            peak_table["%s_gene_nb_rej" % bamfile] = pandas.Series(
+                fdrs["%s_gene_nb" % bamfile][0], index=peak_table.index)
+            peak_table["%s_gene_nb_cor" % bamfile] = pandas.Series(
+                fdrs["%s_gene_nb" % bamfile][1], index=peak_table.index)
+        except:
+            print "Skipping NB FDR calculations..."
 
 def evaluate_hypothesis(peak_table, clip_bed_filename, config, alpha=0.01):
     '''Apply an FDR cutoff and write output files.
@@ -211,12 +213,15 @@ def evaluate_hypothesis(peak_table, clip_bed_filename, config, alpha=0.01):
     # Null hypothesis 5: Signal is not enriched relative to the negative for the gene.
     sub = peak_table[peak_table['neg_ip_gene_norm_cor']<alpha]
     sub.to_csv('%s/null_hyp_5.txt' % replicate_dir, sep='\t')
-    # Null hypothesis 6: Signal is not enriched relative to Neg IP locally.
-    sub = peak_table[peak_table['neg_ip_local_nb_cor']<alpha]
-    sub.to_csv('%s/null_hyp_6.txt' % replicate_dir, sep='\t')
-    # Null hypothesis 7: Signal is not enriched relative to Neg IP for the gene.
-    sub = peak_table[peak_table['neg_ip_gene_nb_cor']<alpha]
-    sub.to_csv('%s/null_hyp_7.txt' % replicate_dir, sep='\t')
+    try:
+        # Null hypothesis 6: Signal is not enriched relative to Neg IP locally.
+        sub = peak_table[peak_table['neg_ip_local_nb_cor']<alpha]
+        sub.to_csv('%s/null_hyp_6.txt' % replicate_dir, sep='\t')
+        # Null hypothesis 7: Signal is not enriched relative to Neg IP for the gene.
+        sub = peak_table[peak_table['neg_ip_gene_nb_cor']<alpha]
+        sub.to_csv('%s/null_hyp_7.txt' % replicate_dir, sep='\t')
+    except:
+        print("Skipping NB file output...")
     # Null hypothesis 8: Signal is not enriched relative to RNA-seq locally.
     sub = peak_table[peak_table['rna_seq_local_norm_cor']<alpha]
     sub.to_csv('%s/null_hyp_8.txt' % replicate_dir, sep='\t')

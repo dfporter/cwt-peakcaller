@@ -93,9 +93,13 @@ class peak:
                 return borders['params']
         return False
 
-    def local_nb(self, bedfiles, norm_factors, known=None):
+    def local_nb(self, bedfiles, norm_factors, known=None, skip=False):
         nb_results = {}
         for bedfile in bedfiles:
+            if skip:
+                self.pvalues['%s_local_nb' % bedfile] = 1.0
+                nb_results[bedfile] = 1.0
+                continue
             if bedfile == 'clip' or len(self.local[bedfile]) == 0:
                 self.pvalues['%s_local_nb'% bedfile] = 1.
                 nb_results[bedfile] = 1.
@@ -174,9 +178,13 @@ class peak:
             self.pvalues['%s_gene_norm' % bamfile] *= len(self.exons[bamfile])
             self.pvalues['%s_gene_norm' % bamfile] = min(1., self.pvalues['%s_gene_norm' % bamfile])
 
-    def gene_nb(self, bedfiles, norm_factors, known=None):
+    def gene_nb(self, bedfiles, norm_factors, known=None, skip=False):
         nb_results = {}
         for bedfile in bedfiles:
+            if skip:
+                self.pvalues['%s_local_nb' % bedfile] = 1.0
+                nb_results[bedfile] = 1.0
+                continue
             if bedfile == 'clip':
                 self.pvalues['%s_gene_nb' % bedfile] = 1.
                 nb_results[bedfile] = 1.

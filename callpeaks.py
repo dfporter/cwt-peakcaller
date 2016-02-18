@@ -157,8 +157,8 @@ motif\ttgt\w\w\wat
 
 
 def complement(s):
-    #basecomplement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N'}
-    basecomplement = {'a': 't', 'c': 'g', 'g': 'c', 't': 'a', 'n': 'n'}
+    basecomplement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N',
+                      'a': 't', 'c': 'g', 'g': 'c', 't': 'a', 'n': 'n'}
     letters = list(s)
     letters = [basecomplement[base] for base in letters]
     return ''.join(letters)
@@ -236,8 +236,9 @@ def score_binding_site(peaks, config=None):
         motif = 'tgt\w\w\wat'
     else:
         motif = config['motif'].lower()
+    pat = re.compile(motif, re.IGNORECASE)
     for index, peak_row in peaks.iterrows():
-        if re.search(motif, peaks.loc[index, 'seq']) is not None:
+        if pat.search(peaks.loc[index, 'seq']) is not None:
             peaks.loc[index, 'has_motif'] = 1
         else:
             peaks.loc[index, 'has_motif'] = 0
@@ -349,11 +350,11 @@ def get_gtf(args, config):
             as_d = pickle.load(f)
             return as_d
     else:
-        gtf_df = pandas.read_csv(config['gtf_filename'], sep='\t')
-        gtf_l = add_signal.df_to_dict(gtf_df)
+        gtf_d = add_signal.df_to_dict(
+            pandas.read_csv(config['gtf_filename'], sep='\t'))
         with open('lib/gtf_as_dict.p', 'wb') as f:
-            pickle.dump(gtf_l, file=f)
-        return gtf_l
+            pickle.dump(gtf_d, file=f)
+        return gtf_d
 
 
 def add_reads_to_peaks_and_return_peak_objects(peak_table, config, gtf_l, clip_replicate):
@@ -365,7 +366,8 @@ def add_reads_to_peaks_and_return_peak_objects(peak_table, config, gtf_l, clip_r
 
 
 def do_stats_apply_fdr_and_output_filtered_files(
-        pob, config, clip_replicate_filename, nb_fits=None):
+        pob, config, clip_replicate_filename, nb_fits=None,
+        skip_nb=False):
     '''Apply statistical cutoffs and evaluate the result.
     Input:
     pob: Peak objects
@@ -377,11 +379,11 @@ def do_stats_apply_fdr_and_output_filtered_files(
     '''
     if (nb_fits is None):
         nb_fits = stats_to_call_peaks.do_statistics(
-            pob, config, clip_replicate_filename)
+            pob, config, clip_replicate_filename, skip_nb=skip_nb)
     else:
         stats_to_call_peaks.do_statistics(
             pob, config, clip_replicate_filename,
-            nb_fits=nb_fits)
+            nb_fits=nb_fits, skip_nb=skip_nb)
     peak_list = to_list(pob)
     peak_df = pandas.DataFrame(peak_list)
     if not os.path.exists('data/%s/peaks_with_stats' % config['experiment_name']):
@@ -408,7 +410,8 @@ def load_peaks_with_stats_and_apply_fdr_and_write(
         peak_df, clip_replicate_filename, config, alpha=alpha)
 
 
-def call(args, config, gtf_l, ga_raw, do_start_logger=True):
+def call(args, config, gtf_l, ga_raw, do_start_logger=True,
+         skip_nb=False):
     print 'calling peaks...'
     if do_start_logger: start_logger(config['experiment_name'])
     logger.info('Experiment bedfiles {d}'.format(
@@ -423,10 +426,13 @@ def call(args, config, gtf_l, ga_raw, do_start_logger=True):
     for clip_replicate_filename in peak_tables:
         peak_table = peak_tables[clip_replicate_filename]
         logger.info('call(): Calling add_signal.add_signal_to_replicate for %s' % clip_replicate_filename)
+        li = ["A\n" + str(x) for x in (
+            ga_raw.keys(), peak_table, clip_replicate_filename, config)]
         pob = add_signal.add_signal_to_replicate(
             ga_raw, peak_table, gtf_l, clip_replicate_filename, config)
         nb_fits = do_stats_apply_fdr_and_output_filtered_files(
-            pob, config, clip_replicate_filename, nb_fits=nb_fits)
+            pob, config, clip_replicate_filename, nb_fits=nb_fits,
+            skip_nb=skip_nb)
     load_and_combine_replicates(config)
     score_metrics('%s/peaks/combined_%s/' % (config['experiment_name'], config['experiment_name']), config)
 
@@ -460,6 +466,10 @@ if __name__ == '__main__':
         '-l', '--load_gtf', action='store_true', default=False,
         help='Load an existing gtf object to speed up (Default: False)'
     )
+    parser.add_argument(
+        '-m', '--skip_nb', action='store_true', default=False,
+        help='Skip the NB calculation for speed (Default: False)'
+    )
     args = parser.parse_args()
     config = read_config(args.config)
     # Load high RAM data. Slow.
@@ -470,4 +480,6 @@ if __name__ == '__main__':
     for clip_replicate in config['clip_replicate']:
         ga_raw[clip_replicate] = peak_calling_tools.load_bed_file(
             config['bed_dir'] + '/' + os.path.basename(clip_replicate).partition('wig')[0] + 'bed')
+    print("callpeaks.py ga_raw():")
+    print(ga_raw)
     call(args, config, gtf_data, ga_raw)

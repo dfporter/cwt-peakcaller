@@ -1,4 +1,4 @@
-experiment_name	test
+experiment_name	oo
 min_rep_number	1
 clip_replicate	testwigs/test_aacc.wig
 clip_replicate	testwigs/test_gcca.wig

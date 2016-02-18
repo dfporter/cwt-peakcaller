@@ -46,6 +46,11 @@ def load_args():
         '-n', '--no_ui', action='store_true', default=False,
         help='No user input (Default: False)'
     )
+    parser.add_argument(
+        '-m', '--skip_nb', action='store_true', default=False,
+        help='Skip the NB calculation for speed (Default: False)'
+    )
+
     args = parser.parse_args()
     return args
 
@@ -63,12 +68,12 @@ if __name__ == '__main__':
         ga_raw[clip_replicate] = peak_calling_tools.load_bed_file(
             config['bed_dir'] + '/' + os.path.basename(clip_replicate).partition('wig')[0] + 'bed')
     if args.no_ui:
-        callpeaks.call(args, config, gtf_data, ga_raw)
+        callpeaks.call(args, config, gtf_data, ga_raw, skip_nb=args.skip_nb)
         print "Finished calling peaks. Exiting."
         sys.exit()
     while True:
         try:
-            callpeaks.call(args, config, gtf_data, ga_raw)
+            callpeaks.call(args, config, gtf_data, ga_raw, skip_nb=args.skip_nb)
         except:
             print "Error in callpeaks()."
             print traceback.format_exc()

@@ -7,6 +7,7 @@ import logging
 import peak
 import logging
 import time
+import collections
 _verbose = True
 
 logger = logging.getLogger(__name__)
@@ -76,11 +77,10 @@ def add_gene_signal(peak, gtf, bedfile_cat_to_ga_key, ga):
 
 
 def df_to_dict(gtf):
-    as_d = {}
-    for index, row in gtf.iterrows():
-        txpt_id = row['transcript_id']
-        as_d.setdefault(txpt_id, [])
-        as_d[txpt_id].append(row.to_dict())
+    as_d = collections.defaultdict(list)
+    gtf_d = gtf.to_dict('records')
+    for row in gtf_d:
+        as_d[row['transcript_id']].append(row)
     return as_d
 
 
