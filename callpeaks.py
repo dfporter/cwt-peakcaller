@@ -10,6 +10,7 @@ import logging
 import time
 import datetime
 import collections
+import sys
 
 import peak_calling_tools
 import combine_replicates
@@ -171,9 +172,9 @@ def rc(s):
 
 
 def score_metrics(dir_name, config):
-    fname_list = []
-    for filename in glob.glob(dir_name + '/*'):
-        fname_list.append(filename)
+    fname_list = glob.glob(dir_name + '/*.txt')
+#    for filename in glob.glob(dir_name + '/*'):
+#        fname_list.append(filename)
     li = ""
     for filename in sorted(fname_list, key=lambda x: os.path.basename(x)):
         print "Scoring metrics for %s" % filename
@@ -200,11 +201,14 @@ def score_metric(filename, label="", given_peaks=False, peaks=False, config=None
 
 def get_sequences(combined):
     fasta_filename = 'lib/c_elegans.WS235.genomic.fa'
+    if 'chrm' in combined.columns: chrm_key = 'chrm'
+    elif 'chrom' in combined.columns: chrm_key = 'chrom'
+    elif 'Chr' in combined.columns: chrm_key = 'Chr'
     sequences = dict((re.sub('CHROMOSOME_', '', p.name), p.seq) for p in HTSeq.FastaReader(fasta_filename))
     for index, peak_row in combined.iterrows():
         start = combined.loc[index, 'left']
         end = combined.loc[index, 'right']
-        chrm = combined.loc[index, 'chrm']
+        chrm = combined.loc[index, chrm_key]
         seq = sequences[chrm][start:end]
         if combined.loc[index, 'strand'] == '-':
             seq = rc(seq)
@@ -261,12 +265,14 @@ def score_positives(peaks, config=None):
 
 
 def load_and_combine_replicates(config):
+    config['min_rep_number'] = 2
     combined = {}
     peaks_by_hypothesis = collections.defaultdict(dict)
     rep_dir_names = [
         "%s/peaks/%s/" % (config['experiment_name'], os.path.splitext(os.path.basename(rep_bam_path))[0]) for rep_bam_path in config['clip_replicate']]
     logging.info('After calling peaks and doing statistics, \
-    replicates are loaded to be combined, from directory names: %s' % str(rep_dir_names))
+    replicates are loaded to be combined, from directory names:\
+    %s' % str(rep_dir_names))
     all_hypothesis = set()
     if 'min_rep_number' in config:
         min_rep_number = int(config['min_rep_number'])
@@ -281,7 +287,8 @@ def load_and_combine_replicates(config):
             if not os.path.exists(filename):
                 logger.error('Missing peaks filename %s' % filename)
                 continue
-            peaks_by_hypothesis[hypothesis][rep_name] = get_peaks(filename)
+            peaks_by_hypothesis[hypothesis][\
+                rep_name] = pandas.DataFrame.from_csv(filename, sep='\t')
             li = "Peaks list %s comprises %i peaks." % (
                 filename, len(peaks_by_hypothesis[hypothesis][rep_name]))
             logging.info(li)
@@ -298,13 +305,14 @@ def load_and_combine_replicates(config):
         for gene in combined[hypothesis]:
             all_rows.extend(combined[hypothesis][gene])
         combined[hypothesis] = pandas.DataFrame(all_rows)
-        write_combined(combined[hypothesis], str(hypothesis), config)
+        write_combined(
+            combined[hypothesis], str(hypothesis), config)
     return combined
 
 
-def get_peaks(filename):
-    peaks = pandas.DataFrame.from_csv(filename, sep='\t')
-    return peaks
+#def get_peaks(filename):
+#    peaks = pandas.DataFrame.from_csv(filename, sep='\t')
+#    return peaks
 
 
 def write_combined(combined, label, config):
@@ -316,7 +324,10 @@ def write_combined(combined, label, config):
     out_dir += 'combined_%s/' % config['experiment_name']
     if not os.path.exists(out_dir):
         os.system('mkdir ' + out_dir)
-    combined.to_csv(out_dir + label, sep='\t')
+#    if len(combined.index) == 0:
+#        return False
+    combined.index = range(len(combined.index))
+    combined.to_csv(out_dir + label, sep='\t', index=True)
 
 
 def to_list(pob):
@@ -340,7 +351,8 @@ def load_tables_of_cwt_peak_calls(config, args):
                 clip_replicate, config, load_data=not args.overwrite)
         else:
             peak_tables[clip_replicate] = pandas.read_csv(
-                'data/cwt_calls/' + os.path.basename(clip_replicate), sep='\t', index=False)
+                'data/%s/cwt_calls/' % config['experiment_name'] + os.path.basename(clip_replicate),
+                sep='\t')
     return peak_tables
 
 
@@ -412,10 +424,15 @@ def load_peaks_with_stats_and_apply_fdr_and_write(
 
 def call(args, config, gtf_l, ga_raw, do_start_logger=True,
          skip_nb=False):
-    print 'calling peaks...'
+    print 'Calling peaks...'
+    #skip = '''
     if do_start_logger: start_logger(config['experiment_name'])
     logger.info('Experiment bedfiles {d}'.format(
         d=ga_raw.keys()[0]))
+    if args.overwrite: os.system(
+        'rm -r data/{a}/cwt_calls/'.format(a=config['experiment_name']))
+    if args.overwrite: os.system(
+        'rm -r data/{a}/peaks_with_stats/'.format(a=config['experiment_name']))
     # Outputs pickled CWT call objects to data/raw_* and peak tables to data/cwt_calls.
     # If args.overwrite is False and the .p objects exist, they will be loaded.
     peak_tables = load_tables_of_cwt_peak_calls(config, args)
@@ -432,7 +449,7 @@ def call(args, config, gtf_l, ga_raw, do_start_logger=True,
             ga_raw, peak_table, gtf_l, clip_replicate_filename, config)
         nb_fits = do_stats_apply_fdr_and_output_filtered_files(
             pob, config, clip_replicate_filename, nb_fits=nb_fits,
-            skip_nb=skip_nb)
+            skip_nb=skip_nb)#'''
     load_and_combine_replicates(config)
     score_metrics('%s/peaks/combined_%s/' % (config['experiment_name'], config['experiment_name']), config)
 

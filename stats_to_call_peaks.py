@@ -32,7 +32,6 @@ def do_statistics(
     logger.info("Peak 1: %s" % str(peak_objs[0].__dict__))
     for bedfile in bedfiles.values():
         if not os.path.exists(bedfile): logger.error('Expected file %s does not exist.' % bedfile)
-    if not os.path.exists('data/peaks_with_stats/'): os.system('mkdir data/peaks_with_stats')
     bedfile_sizes = read_bedfile_sizes(bedfiles)
     norm_factors = get_norm_files(bedfile_sizes)
     replicate_start_time = time.time()
@@ -209,7 +208,6 @@ def evaluate_hypothesis(peak_table, clip_bed_filename, config, alpha=0.01):
     sub.to_csv('%s/null_hyp_4.txt' % replicate_dir, sep='\t')
     before = sorted(peak_table['neg_ip_local_norm_cor'].tolist())
     after = sorted(sub['neg_ip_local_norm_cor'].tolist())
-
     # Null hypothesis 5: Signal is not enriched relative to the negative for the gene.
     sub = peak_table[peak_table['neg_ip_gene_norm_cor']<alpha]
     sub.to_csv('%s/null_hyp_5.txt' % replicate_dir, sep='\t')
@@ -222,6 +220,9 @@ def evaluate_hypothesis(peak_table, clip_bed_filename, config, alpha=0.01):
         sub.to_csv('%s/null_hyp_7.txt' % replicate_dir, sep='\t')
     except:
         print("Skipping NB file output...")
+        tmp = pandas.DataFrame(columns=peak_table.columns)
+        tmp.to_csv('%s/null_hyp_6.txt' % replicate_dir, sep='\t')
+        tmp.to_csv('%s/null_hyp_7.txt' % replicate_dir, sep='\t')
     # Null hypothesis 8: Signal is not enriched relative to RNA-seq locally.
     sub = peak_table[peak_table['rna_seq_local_norm_cor']<alpha]
     sub.to_csv('%s/null_hyp_8.txt' % replicate_dir, sep='\t')

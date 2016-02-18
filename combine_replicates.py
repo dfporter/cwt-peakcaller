@@ -25,25 +25,21 @@ def combine_peaks_not_pandas(replicates, min_num_reps=1, output_dir='peaks/',
            the highest peak range in a given set of overlapping peaks.
     """
     # Convert to a list of dicts.
-    reps = {}
+    print 'combine_peaks_not_pandas'
+    reps = collections.defaultdict(list)
     for rep in replicates:
-        reps[rep] = []
-        for row in replicates[rep].itertuples():
-            reps[rep].append(dict(
-                (str(replicates[rep].columns[num-1]), val) for num, val in enumerate(row))
-            )
+        reps[rep] = replicates[rep].to_dict('records')   
     # Make a lookup by gene.
-    by_gene = {}
+    by_gene = collections.defaultdict(dict)
     for rep in reps:
-        by_gene[rep] = {}
         for row in reps[rep]:
             by_gene[rep].setdefault(row['gene_name'], [])
             by_gene[rep][row['gene_name']].append(row)
     # Get all genes.
-    genes = []
+    genes = set()
     for rep in reps:
-        genes.extend([x['gene_name'] for x in reps[rep]])
-    genes = set(genes)
+        for _name in [x['gene_name'] for x in reps[rep]]:
+            genes.add(_name)
     overlapping_peak_rows = {}
     replicate_target_sets = {
         'all': collections.defaultdict(dict)}
@@ -56,6 +52,7 @@ def combine_peaks_not_pandas(replicates, min_num_reps=1, output_dir='peaks/',
             a_set = set([x[0] for x in peak_list])
             replicate_target_sets['all'].setdefault(gene, [])
             replicate_target_sets['all'][gene].append(a_set)
+        if len(overlapping) == 0: continue
         replicate_target_sets['all'][gene] = sorted(
             replicate_target_sets['all'][gene],
             key=lambda x: len(x))[-1]
@@ -226,6 +223,7 @@ def write_combined_not_pandas(combined, filename, col_order):
             # all_rows.extend([peak_row for peak_row in combined[gene_name]])
             for peak_row in combined[gene_name]:
                 all_rows.append(peak_row)
+        if len(all_rows) == 0: return False
         all_rows = sorted(all_rows, key=lambda x: x['height'])[::-1]
         for peak_row in all_rows:
             li = ""
@@ -245,7 +243,8 @@ if __name__ == '__main__':
     peak_rows_by_gene = combine_peaks_not_pandas(replicates)
     out_dir = top_level_dir.rstrip('/') #+ '_five_reps/'
     if not os.path.exists(out_dir): os.system('mkdir ' + out_dir)
-    write_combined_not_pandas(peak_rows_by_gene, out_dir + '/combined.txt', col_order)
+    write_combined_not_pandas(
+        peak_rows_by_gene, out_dir + '/combined.txt', col_order)
     sys.exit()
 
 

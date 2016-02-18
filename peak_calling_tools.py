@@ -85,8 +85,10 @@ def find_peaks(coverage, chrm='I', strand='+', config=None,
             continue
         for a_pos in signal.find_peaks_cwt(
                 coverage_array, np.arange(low_w, high_w, step_w), noise_perc=noise_perc):
-            peak_pos.append(start + a_pos)
-    li = "peak_calling_tools.find_peaks(): Number of peaks called %i" % len(peak_pos)
+            if coverage_array[a_pos] >= min_read_cutoff:
+                peak_pos.append(start + a_pos)
+    li = "peak_calling_tools.find_peaks(): Number of peaks called %i" % len(
+        peak_pos)
     logger.info(li)
     logger.info('Windows used: %i' % n_windows)
     if n_windows < 10: logger.warn("Low window number!")
@@ -181,10 +183,12 @@ def merge_overlapping(intervals):
 
 def call_peaks_from_wig(coverage, fname, config, load_data=False):
     gtf_filename = config['gtf_filename']
+    datafile = 'data/%s/peak_objs_by_chrm_%s.p' % (
+                config['experiment_name'], os.path.basename(fname))
     if load_data:
         logger.info(
             "call_peaks_from_wig(): Loading existing peak_objs_by_chrm.p object.")
-        with open('data/raw_peak_objs_by_chrm_from_callpeaks.p', 'rb') as f:
+        with open(datafile, 'rb') as f:
             peak_objs_by_chrm = pickle.load(f)
         return peak_objs_by_chrm
     gtf_df = pandas.read_csv(gtf_filename, sep='\t')
@@ -206,11 +210,11 @@ def call_peaks_from_wig(coverage, fname, config, load_data=False):
                 peak_objs_by_chrm[chrm][strand], coverage)
             assign_to_gene(peak_objs_by_chrm, chrm, strand, gtf_df)
             logger.info('Called %i peaks on chrm %s strand %s' % (
-                len(peak_objs_by_chrm), chrm, strand
+                len(peak_objs_by_chrm[chrm][strand]), chrm, strand
             ))
     if not os.path.exists('data/'): os.system('mkdir data')
-    if not os.path.exists('data/pickled_peak_obj'): os.system('mkdir data/pickled_peak_obj')
-    with open('data/raw_peak_objs_by_chrm_from_callpeaks_%s.p' % os.path.basename(fname), 'wb') as f:
+#    if not os.path.exists('data/pickled_peak_obj'): os.system('mkdir data/pickled_peak_obj')
+    with open(datafile, 'wb') as f:
         pickle.dump(peak_objs_by_chrm, f)
     return peak_objs_by_chrm
 
