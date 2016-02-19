@@ -11,6 +11,10 @@ import time
 import datetime
 import collections
 import sys
+from rc import rc
+from read_config import read_config
+from get_sequences import get_sequences
+from score_metrics import score_metrics
 
 import peak_calling_tools
 import combine_replicates
@@ -125,146 +129,6 @@ def convert_peak_objs_to_table(peak_objs_by_chrm):
         )
     )
     return peak_table
-
-
-def read_config(filename):
-    """Expect:
-experiment_name\tname  # Optional.
-clip_replicate\tfilename1.wig
-clip_replicate\tfilename2.wig
-clip_replicate\tfilename3.wig
-gtf_filename\tgtf_filename
-rna_seq_filename\tfilename
-neg_ip_filename\tfilename
-positive_control_genes\tname1;name2;name3;
-motif\ttgt\w\w\wat
-    """
-    config = collections.defaultdict(list)
-    with open(filename, 'r') as f:
-        for li in f:
-            li = li.partition('#')[0]  # Skip comments.
-            if li == '': continue
-            s = li.rstrip('\n').split('\t')
-            try: config[s[0]].append(s[1])
-            except: print "Error parsing line %s in config file. Wrong length?" % li
-    for key in config:
-        if len(config[key]) == 1:
-            config[key] = config[key][0]
-        if key == 'positive_control_genes':
-            config[key] = config[key].split(';')
-    if 'experiment_name' not in config:
-        config['experiment_name'] = os.path.basename(filename)
-    return config
-
-
-def complement(s):
-    basecomplement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N',
-                      'a': 't', 'c': 'g', 'g': 'c', 't': 'a', 'n': 'n'}
-    letters = list(s)
-    letters = [basecomplement[base] for base in letters]
-    return ''.join(letters)
-
-
-def rc(s):
-    s = s[::-1]
-    s = complement(s)
-    return s
-
-
-def score_metrics(dir_name, config):
-    fname_list = glob.glob(dir_name + '/*.txt')
-#    for filename in glob.glob(dir_name + '/*'):
-#        fname_list.append(filename)
-    li = ""
-    for filename in sorted(fname_list, key=lambda x: os.path.basename(x)):
-        print "Scoring metrics for %s" % filename
-        li += score_metric(filename, config=config)
-    with open('score_metrics_%s.txt' % config['experiment_name'], 'w') as f:
-        f.write(li)
-    return li
-
-
-def score_metric(filename, label="", given_peaks=False, peaks=False, config=None):
-    if not label:
-        label = os.path.basename(filename)
-    if not given_peaks:
-        if len(open(filename).readlines()) < 2:
-            return "No peaks."
-        else:
-            peaks = pandas.read_csv(filename, sep='\t')
-    if len(peaks.index) == 0:
-        logger.warn('No peaks in file %s.' % filename)
-        return "No peaks."
-    get_sequences(peaks)
-    score_binding_site(peaks, config=config)
-    #run_dreme(peaks, label)
-    positives = score_positives(peaks, config=config)
-    return write_metrics(peaks, positives, label)
-
-
-def get_sequences(combined):
-    fasta_filename = 'lib/c_elegans.WS235.genomic.fa'
-    if 'chrm' in combined.columns: chrm_key = 'chrm'
-    elif 'chrom' in combined.columns: chrm_key = 'chrom'
-    elif 'Chr' in combined.columns: chrm_key = 'Chr'
-    sequences = dict((re.sub('CHROMOSOME_', '', p.name), p.seq) for p in HTSeq.FastaReader(fasta_filename))
-    for index, peak_row in combined.iterrows():
-        start = combined.loc[index, 'left']
-        end = combined.loc[index, 'right']
-        chrm = combined.loc[index, chrm_key]
-        seq = sequences[chrm][start:end]
-        if combined.loc[index, 'strand'] == '-':
-            seq = rc(seq)
-        combined.loc[index, 'seq'] = seq
-
-
-def write_metrics(peaks, positives, label):
-    li = """
-Dataset: {label}
-Number of peaks: {df_size}
-Number of genes: {n_genes}
-With FBE: {with_fbe}, {fbe_perc}%
-Without FBE: {without_fbe}
-Positive controls: {observed}/{expected}
-Missing positives: {missing}
-""".format(label=label,
-    df_size=len(peaks), n_genes=len(list(set(peaks['gene_name']))),
-           with_fbe=len(peaks[peaks['has_motif']==1]),
-           fbe_perc= float(100 * len(peaks[peaks['has_motif']==1])/len(peaks)),
-           without_fbe=len(peaks[peaks['has_motif']==0]),
-           observed=positives['number of observed positives'],
-           expected=positives['expected'],
-           missing=positives['missing positives'])
-    return li
-
-
-def score_binding_site(peaks, config=None):
-    if config is None or 'motif' not in config:
-        motif = 'tgt\w\w\wat'
-    else:
-        motif = config['motif'].lower()
-    pat = re.compile(motif, re.IGNORECASE)
-    for index, peak_row in peaks.iterrows():
-        if pat.search(peaks.loc[index, 'seq']) is not None:
-            peaks.loc[index, 'has_motif'] = 1
-        else:
-            peaks.loc[index, 'has_motif'] = 0
-
-
-def score_positives(peaks, config=None):
-    if config is None or 'positive_control_genes' not in config:
-        return {'observed positives': set([]), 'number of observed positives': 0,
-            'missing positives': set([]), 'number of missing positives': 0,
-            'expected': 0}
-    known_pos = set(config['positive_control_genes'])
-    obs_genes = set(peaks['gene_name'])
-    obs_pos = known_pos & obs_genes
-    missing_pos = known_pos - obs_genes
-    obs_pos_n = len(list(obs_pos))
-    missing_pos_n = len(list(missing_pos))
-    return {'observed positives': obs_pos, 'number of observed positives': obs_pos_n,
-            'missing positives': missing_pos, 'number of missing positives': missing_pos_n,
-            'expected': len(list(known_pos))}
 
 
 def load_and_combine_replicates(config):

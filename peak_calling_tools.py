@@ -9,7 +9,8 @@ import glob
 import sys
 from itertools import groupby
 from operator import itemgetter
-
+#from rc import rc
+#from get_sequences import get_sequences
 import scipy as sp
 from peak import peak
 import time
