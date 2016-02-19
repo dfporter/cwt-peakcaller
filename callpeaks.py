@@ -188,7 +188,10 @@ def score_metric(filename, label="", given_peaks=False, peaks=False, config=None
     if not label:
         label = os.path.basename(filename)
     if not given_peaks:
-        peaks = pandas.DataFrame.from_csv(filename, sep='\t')
+        if len(open(filename).readlines()) < 2:
+            return "No peaks."
+        else:
+            peaks = pandas.read_csv(filename, sep='\t')
     if len(peaks.index) == 0:
         logger.warn('No peaks in file %s.' % filename)
         return "No peaks."
@@ -265,7 +268,6 @@ def score_positives(peaks, config=None):
 
 
 def load_and_combine_replicates(config):
-    config['min_rep_number'] = 2
     combined = {}
     peaks_by_hypothesis = collections.defaultdict(dict)
     rep_dir_names = [
@@ -288,7 +290,7 @@ def load_and_combine_replicates(config):
                 logger.error('Missing peaks filename %s' % filename)
                 continue
             peaks_by_hypothesis[hypothesis][\
-                rep_name] = pandas.DataFrame.from_csv(filename, sep='\t')
+                rep_name] = pandas.read_csv(filename, sep='\t')
             li = "Peaks list %s comprises %i peaks." % (
                 filename, len(peaks_by_hypothesis[hypothesis][rep_name]))
             logging.info(li)
@@ -327,7 +329,7 @@ def write_combined(combined, label, config):
 #    if len(combined.index) == 0:
 #        return False
     combined.index = range(len(combined.index))
-    combined.to_csv(out_dir + label, sep='\t', index=True)
+    combined.to_csv(out_dir + label, sep='\t', index=False)
 
 
 def to_list(pob):
@@ -351,7 +353,8 @@ def load_tables_of_cwt_peak_calls(config, args):
                 clip_replicate, config, load_data=not args.overwrite)
         else:
             peak_tables[clip_replicate] = pandas.read_csv(
-                'data/%s/cwt_calls/' % config['experiment_name'] + os.path.basename(clip_replicate),
+                'data/%s/cwt_calls/' % config['experiment_name'] \
+                + os.path.basename(clip_replicate),
                 sep='\t')
     return peak_tables
 
@@ -425,7 +428,7 @@ def load_peaks_with_stats_and_apply_fdr_and_write(
 def call(args, config, gtf_l, ga_raw, do_start_logger=True,
          skip_nb=False):
     print 'Calling peaks...'
-    #skip = '''
+    skip = '''
     if do_start_logger: start_logger(config['experiment_name'])
     logger.info('Experiment bedfiles {d}'.format(
         d=ga_raw.keys()[0]))
@@ -433,6 +436,7 @@ def call(args, config, gtf_l, ga_raw, do_start_logger=True,
         'rm -r data/{a}/cwt_calls/'.format(a=config['experiment_name']))
     if args.overwrite: os.system(
         'rm -r data/{a}/peaks_with_stats/'.format(a=config['experiment_name']))
+
     # Outputs pickled CWT call objects to data/raw_* and peak tables to data/cwt_calls.
     # If args.overwrite is False and the .p objects exist, they will be loaded.
     peak_tables = load_tables_of_cwt_peak_calls(config, args)
@@ -449,7 +453,7 @@ def call(args, config, gtf_l, ga_raw, do_start_logger=True,
             ga_raw, peak_table, gtf_l, clip_replicate_filename, config)
         nb_fits = do_stats_apply_fdr_and_output_filtered_files(
             pob, config, clip_replicate_filename, nb_fits=nb_fits,
-            skip_nb=skip_nb)#'''
+            skip_nb=skip_nb)'''
     load_and_combine_replicates(config)
     score_metrics('%s/peaks/combined_%s/' % (config['experiment_name'], config['experiment_name']), config)
 

@@ -198,36 +198,36 @@ def evaluate_hypothesis(peak_table, clip_bed_filename, config, alpha=0.01):
 #        combined.to_csv(f, sep='\t')
     # Null hypothesis 2: Signal is not a local peak relative to itself.
     sub = peak_table[peak_table['clip_local_poisson_cor']<alpha]
-    sub.to_csv('%s/null_hyp_2.txt' % replicate_dir, sep='\t')
+    sub.to_csv('%s/null_hyp_2.txt' % replicate_dir, sep='\t', index=False)
     # Null hypothesis 3: Signal is not a peak relative to CLIP signal in the gene.
     sub = peak_table[peak_table['clip_gene_poisson_cor']<alpha]
-    sub.to_csv('%s/null_hyp_3.txt' % replicate_dir, sep='\t')
+    sub.to_csv('%s/null_hyp_3.txt' % replicate_dir, sep='\t', index=False)
 
     # Null hypothesis 4: Signal is not enriched relative to the negative in the local region.
     sub = peak_table[peak_table['neg_ip_local_norm_cor']<alpha]
-    sub.to_csv('%s/null_hyp_4.txt' % replicate_dir, sep='\t')
+    sub.to_csv('%s/null_hyp_4.txt' % replicate_dir, sep='\t', index=False)
     before = sorted(peak_table['neg_ip_local_norm_cor'].tolist())
     after = sorted(sub['neg_ip_local_norm_cor'].tolist())
     # Null hypothesis 5: Signal is not enriched relative to the negative for the gene.
     sub = peak_table[peak_table['neg_ip_gene_norm_cor']<alpha]
-    sub.to_csv('%s/null_hyp_5.txt' % replicate_dir, sep='\t')
+    sub.to_csv('%s/null_hyp_5.txt' % replicate_dir, sep='\t', index=False)
     try:
         # Null hypothesis 6: Signal is not enriched relative to Neg IP locally.
         sub = peak_table[peak_table['neg_ip_local_nb_cor']<alpha]
-        sub.to_csv('%s/null_hyp_6.txt' % replicate_dir, sep='\t')
+        sub.to_csv('%s/null_hyp_6.txt' % replicate_dir, sep='\t', index=False)
         # Null hypothesis 7: Signal is not enriched relative to Neg IP for the gene.
         sub = peak_table[peak_table['neg_ip_gene_nb_cor']<alpha]
-        sub.to_csv('%s/null_hyp_7.txt' % replicate_dir, sep='\t')
+        sub.to_csv('%s/null_hyp_7.txt' % replicate_dir, sep='\t', index=False)
     except:
         print("Skipping NB file output...")
         tmp = pandas.DataFrame(columns=peak_table.columns)
-        tmp.to_csv('%s/null_hyp_6.txt' % replicate_dir, sep='\t')
-        tmp.to_csv('%s/null_hyp_7.txt' % replicate_dir, sep='\t')
+        tmp.to_csv('%s/null_hyp_6.txt' % replicate_dir, sep='\t', index=False)
+        tmp.to_csv('%s/null_hyp_7.txt' % replicate_dir, sep='\t', index=False)
     # Null hypothesis 8: Signal is not enriched relative to RNA-seq locally.
     sub = peak_table[peak_table['rna_seq_local_norm_cor']<alpha]
-    sub.to_csv('%s/null_hyp_8.txt' % replicate_dir, sep='\t')
+    sub.to_csv('%s/null_hyp_8.txt' % replicate_dir, sep='\t', index=False)
     # Null hypothesis 9: Signal is not enriched relative to RNA-seq for the gene.
     sub = peak_table[peak_table['rna_seq_gene_norm_cor']<alpha]
-    sub.to_csv('%s/null_hyp_9.txt' % replicate_dir, sep='\t')
+    sub.to_csv('%s/null_hyp_9.txt' % replicate_dir, sep='\t', index=False)
 
 
