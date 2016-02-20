@@ -120,17 +120,8 @@ motif\ttgt\w\w\wat
 def get_bed_size(fname):
     return float(len(open(fname).readlines()))
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-p', '--peaks_fname',
-                        help='Filename of peaks file.')
-    parser.add_argument('-c', '--config')
-    parser.add_argument('-r', '--ratio_cutoff',
-                        help='Enrichment ratio cutoff.')
-    parser.add_argument('-o', '--output')
-    args = parser.parse_args()
-    args.ratio_cutoff = float(args.ratio_cutoff)
-    config = read_config(args.config)
+
+def add_read_columns(args, config):
     non_control = {}
     bedfiles = {'control': "{a}/{b}.wig".format(
         a=os.path.dirname(config['clip_replicate'][0]),
@@ -148,7 +139,7 @@ if __name__ == '__main__':
     for bedgraph in bedfiles:
         if re.search('control', bedgraph):
             size[bedgraph] = get_bed_size(config['neg_ip_filename'])
-            col_name = 'depth_control' + bedgraph
+            col_name = 'depth_control_' + bedgraph
             peaks[col_name] = [
                 1e6 * x/size[bedgraph] for x in peaks[bedgraph].tolist()]
             continue
@@ -161,16 +152,50 @@ if __name__ == '__main__':
         col_name = 'depth_exp_' + bedgraph
         peaks[col_name] = [
             1e6 * x/size[bedgraph] for x in peaks[bedgraph].tolist()]
+    return peaks
+
+
+def add_sum_and_ratio_columns(peaks):
+    exp_cols = [col for col in peaks.columns if re.search('depth_exp_', col)]
+    control_cols = [col for col in peaks.columns\
+                    if re.search('depth_control_', col)]
     for i, row in peaks.iterrows():
         peaks.loc[i, 'exp'] = sum([
-            peaks.loc[i, col] for col in peaks.columns\
-            if re.search('depth_exp_', col)])
+            peaks.loc[i, col] for col in exp_cols])/float(len(exp_cols))
         peaks.loc[i, 'control'] = sum([
-            peaks.loc[i, col] for col in peaks.columns\
-            if re.search('depth_control_', col)])
+            peaks.loc[i, col] for col in control_cols])/float(len(control_cols))
         peaks.loc[i, 'ratio'] = float(peaks.loc[i, 'exp'])\
                                 /float(max([1., row['control']]))
-    peaks.to_csv(args.peaks_fname, sep='\t', index=False)
+    return peaks
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--peaks_fname',
+                        help='Filename of peaks file.')
+    parser.add_argument('-c', '--config')
+    parser.add_argument('-r', '--ratio_cutoff',
+                        help='Enrichment ratio cutoff.')
+    parser.add_argument('-o', '--output')
+    args = parser.parse_args()
+    args.ratio_cutoff = float(args.ratio_cutoff)
+    config = read_config(args.config)
+    header = open(args.peaks_fname).readline()
+    if (re.search('depth_exp', header) is not None) and (
+        re.search('depth_control', header) is not None):
+        print "Peaks file appears to already have read count columns.\
+ Overwrite them?"
+        answer = raw_input(prompt)
+        print answer
+        if answer[0].upper() == 'Y':
+            peaks = add_read_columns(args, config)
+            peaks = add_sum_and_ratio_columns(peaks)
+            peaks.to_csv(args.peaks_fname, sep='\t', index=False)
+        else:
+            print "Using the existing columns then..."
+    else:
+        peaks = add_read_columns(args, config)
+        peaks = add_sum_and_ratio_columns(peaks)
+        peaks.to_csv(args.peaks_fname, sep='\t', index=False)
     peaks = peaks[peaks['ratio']>=args.ratio_cutoff]
     peaks.to_csv(args.output, sep='\t', index=False)
 
