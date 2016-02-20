@@ -184,7 +184,7 @@ if __name__ == '__main__':
         re.search('depth_control', header) is not None):
         print "Peaks file appears to already have read count columns.\
  Overwrite them?"
-        answer = raw_input(prompt)
+        answer = raw_input('(Y/N?) >')
         print answer
         if answer[0].upper() == 'Y':
             peaks = add_read_columns(args, config)
