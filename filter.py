@@ -146,9 +146,10 @@ if __name__ == '__main__':
     peaks = add_heights_to_peak_file(args.peaks_fname, ga_d)
     size = {}
     for bedgraph in bedfiles:
-        if bedgraph == 'control':
+        if re.search('control', bedgraph):
             size[bedgraph] = get_bed_size(config['neg_ip_filename'])
-            peaks[bedgraph] = [
+            col_name = 'depth_control' + bedgraph
+            peaks[col_name] = [
                 1e6 * x/size[bedgraph] for x in peaks[bedgraph].tolist()]
             continue
         print config['bed_dir']
@@ -157,11 +158,16 @@ if __name__ == '__main__':
         bed_file = config['bed_dir'] +'/' + \
                    os.path.basename(bedgraph).rstrip('.wig') + '.bed'
         size[bedgraph] = get_bed_size(bed_file)
-        peaks[bedgraph] = [
+        col_name = 'depth_exp_' + bedgraph
+        peaks[col_name] = [
             1e6 * x/size[bedgraph] for x in peaks[bedgraph].tolist()]
     for i, row in peaks.iterrows():
         peaks.loc[i, 'exp'] = sum([
-            peaks.loc[i, col] for col in non_control.keys()])
+            peaks.loc[i, col] for col in peaks.columns\
+            if re.search('depth_exp_', col)])
+        peaks.loc[i, 'control'] = sum([
+            peaks.loc[i, col] for col in peaks.columns\
+            if re.search('depth_control_', col)])
         peaks.loc[i, 'ratio'] = float(peaks.loc[i, 'exp'])\
                                 /float(max([1., row['control']]))
     peaks.to_csv(args.peaks_fname, sep='\t', index=False)
