@@ -11,7 +11,7 @@ import stats_to_call_peaks
 import add_signal
 import peak
 import NBin
-
+import re
 
 def load_args():
     parser = argparse.ArgumentParser(description='''
@@ -50,30 +50,35 @@ def load_args():
         '-m', '--skip_nb', action='store_true', default=False,
         help='Skip the NB calculation for speed (Default: False)'
     )
-
     args = parser.parse_args()
     return args
 
 if __name__ == '__main__':
     args = load_args()
-    config = callpeaks.read_config(args.config)
-    callpeaks.start_logger(config['experiment_name'])
+    if re.search('.ini', args.config):
+        #sys.path.insert(0, args.config)
+        import config
+        lib = config.config(filepath=args.config)
+    else:
+        lib = callpeaks.read_config(args.config)
+    print lib
+    callpeaks.start_logger(lib['experiment_name'])
     print "Loading gtf..."
-    gtf_data = callpeaks.get_gtf(args, config)
+    gtf_data = callpeaks.get_gtf(args, lib)
     ga_raw = {}
     print "Loading bed files..."
-    ga_raw['neg_ip'] = peak_calling_tools.load_bed_file(config['neg_ip_filename'])
-    ga_raw['rna_seq'] = peak_calling_tools.load_bed_file(config['rna_seq_filename'])
-    for clip_replicate in config['clip_replicate']:
+    ga_raw['neg_ip'] = peak_calling_tools.load_bed_file(lib['neg_ip_filename'])
+    ga_raw['rna_seq'] = peak_calling_tools.load_bed_file(lib['rna_seq_filename'])
+    for clip_replicate in lib['clip_replicate']:
         ga_raw[clip_replicate] = peak_calling_tools.load_bed_file(
-            config['bed_dir'] + '/' + os.path.basename(clip_replicate).partition('wig')[0] + 'bed')
+            lib['bed_dir'] + '/' + os.path.basename(clip_replicate).partition('wig')[0] + 'bed')
     if args.no_ui:
-        callpeaks.call(args, config, gtf_data, ga_raw, skip_nb=args.skip_nb)
+        callpeaks.call(args, lib, gtf_data, ga_raw, skip_nb=args.skip_nb)
         print "Finished calling peaks. Exiting."
         sys.exit()
     while True:
         try:
-            callpeaks.call(args, config, gtf_data, ga_raw, skip_nb=args.skip_nb)
+            callpeaks.call(args, lib, gtf_data, ga_raw, skip_nb=args.skip_nb)
         except:
             print "Error in callpeaks()."
             print traceback.format_exc()

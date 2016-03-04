@@ -12,7 +12,7 @@ testbed/, testwigs/, lib/mtdna.gtf and configfile are example input files.
 
 Example: ::
 
-	$ python main.py -c configfile -x
+	$ python main.py -c config.ini -x
 
 The -x ensures that new peaks are called instead of loading existing data.
 
