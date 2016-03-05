@@ -53,12 +53,16 @@ def load_args():
     args = parser.parse_args()
     return args
 
+
 if __name__ == '__main__':
     args = load_args()
-    if re.search('.ini', args.config):
+    if re.search('\.ini', args.config):
         #sys.path.insert(0, args.config)
         import config
         lib = config.config(filepath=args.config)
+        lib['clip_replicate'] = [lib[x] for x in lib.keys() if\
+                                 re.match('clip_replicate.*', x)]
+        print lib['clip_replicate']
     else:
         lib = callpeaks.read_config(args.config)
     print lib
