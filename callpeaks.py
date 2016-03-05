@@ -292,7 +292,6 @@ def load_peaks_with_stats_and_apply_fdr_and_write(
 def call(args, config, gtf_l, ga_raw, do_start_logger=True,
          skip_nb=False):
     print 'Calling peaks...'
-    skip = '''
     if do_start_logger: start_logger(config['experiment_name'])
     logger.info('Experiment bedfiles {d}'.format(
         d=ga_raw.keys()[0]))
@@ -317,7 +316,7 @@ def call(args, config, gtf_l, ga_raw, do_start_logger=True,
             ga_raw, peak_table, gtf_l, clip_replicate_filename, config)
         nb_fits = do_stats_apply_fdr_and_output_filtered_files(
             pob, config, clip_replicate_filename, nb_fits=nb_fits,
-            skip_nb=skip_nb)'''
+            skip_nb=skip_nb)
     load_and_combine_replicates(config)
     score_metrics('%s/peaks/combined_%s/' % (config['experiment_name'], config['experiment_name']), config)
 
