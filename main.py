@@ -62,20 +62,23 @@ if __name__ == '__main__':
         lib = config.config(filepath=args.config)
         lib['clip_replicate'] = [lib[x] for x in lib.keys() if\
                                  re.match('clip_replicate.*', x)]
+        lib['clip_replicate_bed'] = [lib[x] for x in lib.keys() if\
+                                 re.match('exp_bed.*', x)]
         print lib['clip_replicate']
     else:
         lib = callpeaks.read_config(args.config)
+    ga_raw = {}
     print lib
     callpeaks.start_logger(lib['experiment_name'])
-    print "Loading gtf..."
-    gtf_data = callpeaks.get_gtf(args, lib)
-    ga_raw = {}
     print "Loading bed files..."
     ga_raw['neg_ip'] = peak_calling_tools.load_bed_file(lib['neg_ip_filename'])
     ga_raw['rna_seq'] = peak_calling_tools.load_bed_file(lib['rna_seq_filename'])
-    for clip_replicate in lib['clip_replicate']:
-        ga_raw[clip_replicate] = peak_calling_tools.load_bed_file(
-            lib['bed_dir'] + '/' + os.path.basename(clip_replicate).partition('wig')[0] + 'bed')
+    for clip_replicate in lib['clip_replicate_bed']:
+        ga_raw[clip_replicate] = peak_calling_tools.load_bed_file(clip_replicate)
+#        ga_raw[clip_replicate] = peak_calling_tools.load_bed_file(
+#            lib['bed_dir'] + '/' + os.path.basename(clip_replicate).partition('wig')[0] + 'bed')
+    print "Loading gtf..."
+    gtf_data = callpeaks.get_gtf(args, lib)
     if args.no_ui:
         callpeaks.call(args, lib, gtf_data, ga_raw, skip_nb=args.skip_nb)
         print "Finished calling peaks. Exiting."

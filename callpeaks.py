@@ -101,12 +101,22 @@ def convert_peak_objs_to_table(peak_objs_by_chrm):
     output_cols = ['chrm', 'left', 'right', 'strand',
                    'height']#, 'max_bin']  # Simple colums.
     for key in peak_objs_by_chrm.keys():
-        if peak_objs_by_chrm[key]['+'] is not None:
+        if ('+' in peak_objs_by_chrm) and (
+            peak_objs_by_chrm[key]['+'] is not None):
             try:
                 output_cols += dict(peak_objs_by_chrm[key]['+'][0].gene).keys()
                 output_cols += dict(peak_objs_by_chrm[key]['+'][0].pvalues).keys()
                 break
             except: return pandas.DataFrame()
+        elif ('-' in peak_objs_by_chrm) and (
+            peak_objs_by_chrm[key]['-'] is not None):
+            try:
+                output_cols += dict(peak_objs_by_chrm[key]['-'][0].gene).keys()
+                output_cols += dict(peak_objs_by_chrm[key]['-'][0].pvalues).keys()
+                break
+            except: return pandas.DataFrame()
+        else:
+            return pandas.DataFrame()
     for chrm in peak_objs_by_chrm:
         for strand in peak_objs_by_chrm[chrm]:
             for p in peak_objs_by_chrm[chrm][strand]:
@@ -212,6 +222,7 @@ def load_tables_of_cwt_peak_calls(config, args):
         If successful, tables will be written to data/cwt_calls/.''' % str(config))
     peak_tables = {}
     for clip_replicate in config['clip_replicate']:
+        clip_replicate = re.sub('_[-]\.wig', '.wig', clip_replicate)
         if not args.just_stats:
             peak_tables[clip_replicate] = call_peaks_by_cwt_on_replicate(
                 clip_replicate, config, load_data=not args.overwrite)
@@ -303,6 +314,8 @@ def call(args, config, gtf_l, ga_raw, do_start_logger=True,
     # Outputs pickled CWT call objects to data/raw_* and peak tables to data/cwt_calls.
     # If args.overwrite is False and the .p objects exist, they will be loaded.
     peak_tables = load_tables_of_cwt_peak_calls(config, args)
+    print "Made peak tables:"
+    print peak_tables
     logger.info('call(): Finished loading/creating %i cwt tables: %s' % (
         len(peak_tables), str([str(peak_tables[x]) for x in peak_tables])
     ))
