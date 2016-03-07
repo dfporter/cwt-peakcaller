@@ -79,7 +79,10 @@ def score_positives(peaks, config=None):
         return {'observed positives': set([]), 'number of observed positives': 0,
             'missing positives': set([]), 'number of missing positives': 0,
             'expected': 0}
-    known_pos = set(config['positive_control_genes'])
+    positives = config['positive_control_genes'].split(',')
+    print 'score_positives'
+    print positives
+    known_pos = set(positives)
     obs_genes = set(peaks['gene_name'])
     obs_pos = known_pos & obs_genes
     missing_pos = known_pos - obs_genes
