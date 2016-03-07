@@ -22,7 +22,7 @@ def do_statistics(
         peak_objs, config, clip_replicate_filename,
         nb_fits=None, skip_nb=False):
     bedfiles = {
-            'clip': config['bed_dir'] + '/' + os.path.basename(clip_replicate_filename).partition('wig')[0] + 'bed',
+            'clip': clip_replicate_filename,
             'rna_seq': config['rna_seq_filename'],
             'neg_ip': config['neg_ip_filename']}
     logger.info("do_statistics() with %i peaks..." % len(peak_objs))

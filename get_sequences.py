@@ -2,9 +2,10 @@ import HTSeq
 import re
 import pandas
 from rc import rc
-def get_sequences(combined):
+def get_sequences(combined, fasta_filename=None):
     """combined = pandas.DataFrame."""
-    fasta_filename = 'lib/c_elegans.WS235.genomic.fa'
+    if fasta_filename is None:
+        fasta_filename = 'lib/c_elegans.WS235.genomic.fa'
     if 'chrm' in combined.columns: chrm_key = 'chrm'
     elif 'chrom' in combined.columns: chrm_key = 'chrom'
     elif 'Chr' in combined.columns: chrm_key = 'Chr'

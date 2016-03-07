@@ -34,7 +34,7 @@ def score_metric(filename, label="", given_peaks=False, peaks=False,
             peaks = pandas.read_csv(filename, sep='\t')
     if len(peaks.index) == 0:
         return "No peaks."
-    get_sequences(peaks)
+    get_sequences(peaks, fasta_filename=config['fasta'])
     score_binding_site(peaks, config=config)
     #run_dreme(peaks, label)
     positives = score_positives(peaks, config=config)

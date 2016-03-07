@@ -1,3 +1,4 @@
+import os
 import glob
 import re
 import sys
@@ -24,11 +25,6 @@ for fn in [bed,  unnorm_bedgraph]:
 bed = bed[0]
 #norm_bedgraph = norm_bedgraph[0]
 unnorm_bedgraph = unnorm_bedgraph[0]
-print folders
-print bedgraphs
-#print norm_bedgraph
-print unnorm_bedgraph
-print bed
 controlbeds = [x for x in glob.glob(bed + '/*.bed') if re.search('control', x)]
 controlbeds = sorted(controlbeds, key=lambda x: len(x))
 rnaseqbeds = [x for x in glob.glob(bed + '/*.bed') if re.search('seq', x)]
@@ -40,12 +36,30 @@ clip_reps = list(set([re.sub('_[\+-]\.wig', '.wig', x) for x in \
                  clip_reps]))
 #for rep in clip_reps:
 #    rep = re.sub('_[\+-].wig', '.wig', rep)
+lib_folders = [x for x in folders if re.search('lib', x)]
+lib = '/groups/Kimble/Common/fog_iCLIP/calls/lib/'
+fasta = lib + 'mtDNA.fa'
+gtf = lib + 'gtf_with_names_column.txt'
+if len(lib_folders) > 0:
+    lib_folder = sorted(lib_folders, key=lambda x: len(x))[0]
+    lib = lib_folder
+    print [os.path.splitext(x) for x in glob.glob(lib + '/*')]
+    fastas = [x for x in glob.glob(lib + '/*') if os.path.splitext(x)[1]=='.fa']
+    fastas += [x for x in glob.glob(lib + '/*') if os.path.splitext(x)[1]=='.fas']
+    fastas += [x for x in glob.glob(lib + '/*') if os.path.splitext(x)[1]=='.fasta']
+    gtfs = [x for x in glob.glob(lib + '/*') if re.search('gtf', x)]
+    if len(fastas) > 0:
+        fasta = fastas[0]
+    if len(gtfs) > 0:
+        gtf = gtfs[0]
+
 li = """
 [library]
 top: {top}
 lib: {lib}
 gtf: {gtf}
 gtf_filename: {gtf}
+fasta: {fasta}
 bedgraphs_folder: {unnorm}
 read_beds: {collapsed}
 bed_dir: {collapsed}
@@ -64,8 +78,9 @@ positive_control_genes: gld-1,htp-1,htp-2,mpk-1,him-3,fbf-1,lip-1,syp-2,fbf-2,fo
 motif: tgt\w\w\wat
 """.format(
 top=indir,
-lib='/groups/Kimble/Common/fog_iCLIP/calls/lib/',
-gtf="%(lib)s/gtf_with_names_column.txt",
+lib=lib,
+gtf=gtf,
+fasta=fasta,
 unnorm=unnorm_bedgraph,
 collapsed=bed,
 controlbed=controlbeds[0],

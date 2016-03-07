@@ -88,6 +88,33 @@ def call_peaks_by_cwt_on_replicate(clip_wig_filename, config, load_data=False):
     return peak_table
 
 
+def define_output_cols(peak_objs_by_chrm):
+    output_cols = ['chrm', 'left', 'right', 'strand',
+                   'height']#, 'max_bin']  # Simple colums.
+    for key in peak_objs_by_chrm.keys():
+        print key
+        print peak_objs_by_chrm[key]
+        if ('+' in peak_objs_by_chrm[key]) and (
+            peak_objs_by_chrm[key]['+'] is not None):
+            #try:
+            output_cols += dict(peak_objs_by_chrm[key]['+'][0].gene).keys()
+            output_cols += dict(peak_objs_by_chrm[key]['+'][0].pvalues).keys()
+            print "+ used"
+            return output_cols
+            #except: return output_cols
+        elif ('-' in peak_objs_by_chrm[key]) and (
+            peak_objs_by_chrm[key]['-'] is not None):
+            #try:
+            output_cols += dict(peak_objs_by_chrm[key]['-'][0].gene).keys()
+            output_cols += dict(peak_objs_by_chrm[key]['-'][0].pvalues).keys()
+            print "- used"
+            return output_cols
+        print "---"
+            ##except: return output_cols
+    print "No peaks..."
+    return output_cols
+
+
 def convert_peak_objs_to_table(peak_objs_by_chrm):
     total_peaks = 0
     for chrm in peak_objs_by_chrm:
@@ -98,25 +125,9 @@ def convert_peak_objs_to_table(peak_objs_by_chrm):
             total_peaks, len(peak_objs_by_chrm)))
     # Convert to a table and write.
     peak_list = []
-    output_cols = ['chrm', 'left', 'right', 'strand',
-                   'height']#, 'max_bin']  # Simple colums.
-    for key in peak_objs_by_chrm.keys():
-        if ('+' in peak_objs_by_chrm) and (
-            peak_objs_by_chrm[key]['+'] is not None):
-            try:
-                output_cols += dict(peak_objs_by_chrm[key]['+'][0].gene).keys()
-                output_cols += dict(peak_objs_by_chrm[key]['+'][0].pvalues).keys()
-                break
-            except: return pandas.DataFrame()
-        elif ('-' in peak_objs_by_chrm) and (
-            peak_objs_by_chrm[key]['-'] is not None):
-            try:
-                output_cols += dict(peak_objs_by_chrm[key]['-'][0].gene).keys()
-                output_cols += dict(peak_objs_by_chrm[key]['-'][0].pvalues).keys()
-                break
-            except: return pandas.DataFrame()
-        else:
-            return pandas.DataFrame()
+    output_cols = define_output_cols(peak_objs_by_chrm)
+    print "-=== output cols:"
+    print output_cols
     for chrm in peak_objs_by_chrm:
         for strand in peak_objs_by_chrm[chrm]:
             for p in peak_objs_by_chrm[chrm][strand]:
@@ -125,9 +136,7 @@ def convert_peak_objs_to_table(peak_objs_by_chrm):
                     continue
                 row += [str(p.gene[key]) for key in dict(p.gene).keys()]
                 row += [str(p.pvalues[key]) for key in dict(p.pvalues).keys()]
-                #else:
-                #    row += ['na' for x in range(1,14)]
-                #    row += ['na' for x in range(1,10)]
+                if len(row) != len(output_cols): continue
                 peak_list.append(row)
     peak_table = pandas.DataFrame(peak_list, columns=output_cols)
     peak_table = peak_table[peak_table['transcript_id']!='na']
@@ -303,6 +312,10 @@ def load_peaks_with_stats_and_apply_fdr_and_write(
 def call(args, config, gtf_l, ga_raw, do_start_logger=True,
          skip_nb=False):
     print 'Calling peaks...'
+    for k in config:
+        print k
+        print config[k]
+    print "\n" * 100
     if do_start_logger: start_logger(config['experiment_name'])
     logger.info('Experiment bedfiles {d}'.format(
         d=ga_raw.keys()[0]))
@@ -320,15 +333,25 @@ def call(args, config, gtf_l, ga_raw, do_start_logger=True,
         len(peak_tables), str([str(peak_tables[x]) for x in peak_tables])
     ))
     nb_pvals_local, nb_pvals_gene, nb_fits = (None, None, None)
-    for clip_replicate_filename in peak_tables:
+    for clip_replicate_filename in peak_tables:  # bedgraph
+        print clip_replicate_filename
+        if clip_replicate_filename in config['clip_replicate']:
+            i = config['clip_replicate'].index(
+                clip_replicate_filename)
+            print 'in at index %i' % i
+            bedname = config['clip_replicate_bed'][i]
+            print bedname
+        #sys.exit()
         peak_table = peak_tables[clip_replicate_filename]
         logger.info('call(): Calling add_signal.add_signal_to_replicate for %s' % clip_replicate_filename)
         li = ["A\n" + str(x) for x in (
-            ga_raw.keys(), peak_table, clip_replicate_filename, config)]
+            ga_raw.keys(), peak_table, \
+            bedname, config)]
         pob = add_signal.add_signal_to_replicate(
-            ga_raw, peak_table, gtf_l, clip_replicate_filename, config)
+            ga_raw, peak_table, gtf_l, \
+            bedname, config)
         nb_fits = do_stats_apply_fdr_and_output_filtered_files(
-            pob, config, clip_replicate_filename, nb_fits=nb_fits,
+            pob, config, bedname, nb_fits=nb_fits,
             skip_nb=skip_nb)
     load_and_combine_replicates(config)
     score_metrics('%s/peaks/combined_%s/' % (config['experiment_name'], config['experiment_name']), config)
