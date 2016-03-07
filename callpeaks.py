@@ -321,7 +321,7 @@ def call(args, config, gtf_l, ga_raw, do_start_logger=True,
     if do_start_logger: start_logger(config['experiment_name'])
     logger.info('Experiment bedfiles {d}'.format(
         d=ga_raw.keys()[0]))
-    skip = '''
+    #skip = '''
     if args.overwrite: os.system(
         'rm -r data/{a}/cwt_calls/'.format(a=config['experiment_name']))
     if args.overwrite: os.system(
@@ -355,7 +355,7 @@ def call(args, config, gtf_l, ga_raw, do_start_logger=True,
             bedname, config)
         nb_fits = do_stats_apply_fdr_and_output_filtered_files(
             pob, config, bedname, nb_fits=nb_fits,
-            skip_nb=skip_nb)'''
+            skip_nb=skip_nb)#'''
     load_and_combine_replicates(config)
     score_metrics('%s/peaks/combined_%s/' % (config['experiment_name'], config['experiment_name']), config)
 
