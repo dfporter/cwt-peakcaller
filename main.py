@@ -60,10 +60,6 @@ if __name__ == '__main__':
         #sys.path.insert(0, args.config)
         import config
         lib = config.config(filepath=args.config)
-        lib['clip_replicate'] = [lib[x] for x in lib.keys() if\
-                                 re.match('clip_replicate.*', x)]
-        lib['clip_replicate_bed'] = [lib[x] for x in lib.keys() if\
-                                 re.match('exp_bed.*', x)]
         print lib['clip_replicate']
     else:
         lib = callpeaks.read_config(args.config)

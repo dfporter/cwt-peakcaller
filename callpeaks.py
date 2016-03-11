@@ -12,7 +12,7 @@ import datetime
 import collections
 import sys
 from rc import rc
-from read_config import read_config
+import config
 from get_sequences import get_sequences
 from score_metrics import score_metrics
 
@@ -43,7 +43,7 @@ def any_have_na(peak_objs):
     if not has_na:
         logger.info("No peaks have na height.")
 
-
+import inspect
 def call_peaks_by_cwt_on_replicate(clip_wig_filename, config, load_data=False):
     """Calls or loads CWT peaks for a wig filename.
     In: filename of .wig, config data.
@@ -51,6 +51,7 @@ def call_peaks_by_cwt_on_replicate(clip_wig_filename, config, load_data=False):
     Writes: data/expname/cwt_calls/ tables of CWT peaks.
     Returns: pandas.DataFrame of the CWT table written to cwt_calls/
     """
+    print inspect.currentframe().f_code.co_name
     loaded_data = False
     if not os.path.exists('data/'): os.system('mkdir data')
     if not os.path.exists('data/%s' % config['experiment_name']):
@@ -64,8 +65,13 @@ def call_peaks_by_cwt_on_replicate(clip_wig_filename, config, load_data=False):
             li = "Loaded peaks called previously and saved as file %s." % datafile
             logger.info(li)
             peak_table = convert_peak_objs_to_table(peak_objs_by_chrm)
-            loaded_data = True
-            print li
+            if peak_table is not None:
+                loaded_data = True
+                print li
+            else:
+                print "Failed to load data for %s (got None). \
+Regenerating..." % (
+                clip_wig_filename)
         except:
             li = "Failed to load data for %s (Expected %s). Regenerating..." % (
                 clip_wig_filename,
@@ -78,10 +84,22 @@ def call_peaks_by_cwt_on_replicate(clip_wig_filename, config, load_data=False):
         peak_objs_by_chrm = peak_calling_tools.call_peaks_from_wig(
             coverage, clip_wig_filename, config)
         peak_table = convert_peak_objs_to_table(peak_objs_by_chrm)
-        with open(datafile, 'wb') as f:
-            pickle.dump(peak_objs_by_chrm, f)
+        if peak_table is not None:
+            with open(datafile, 'wb') as f:
+                print "Writing %i peaks to %s" % (len(peak_table), datafile)
+                pickle.dump(peak_objs_by_chrm, f)
+        else:
+            print "Tried to call peaks again, but got a None value."
     if not os.path.exists('data/%s/cwt_calls/' % config['experiment_name']):
         os.system('mkdir data/%s/cwt_calls' % config['experiment_name'])
+    if peak_table  is None:
+        print "Got None value for peaks bedgraph file %s / datafile %s" % (
+            clip_wig_filename, datafile)
+        print "Bedgraph file + has %i lines minus has %i lines, datafile has %i" % (
+            sum([1 for x in open(re.sub('\.wig', '_+.wig', clip_wig_filename)).readlines()]),
+            sum([1 for x in open(re.sub('\.wig', '_-.wig', clip_wig_filename)).readlines()]),
+            sum([1 for x in open(datafile).readlines()]))
+        return None
     peak_table.to_csv('data/%s/cwt_calls/%s' % (
         config['experiment_name'], os.path.basename(clip_wig_filename)),
                       sep='\t', index=False)
@@ -91,19 +109,20 @@ def call_peaks_by_cwt_on_replicate(clip_wig_filename, config, load_data=False):
 def define_output_cols(peak_objs_by_chrm):
     output_cols = ['chrm', 'left', 'right', 'strand',
                    'height']#, 'max_bin']  # Simple colums.
+    print inspect.currentframe().f_code.co_name
     for key in peak_objs_by_chrm.keys():
         print key
         print peak_objs_by_chrm[key]
         if ('+' in peak_objs_by_chrm[key]) and (
-            peak_objs_by_chrm[key]['+'] is not None):
-            #try:
-            output_cols += dict(peak_objs_by_chrm[key]['+'][0].gene).keys()
-            output_cols += dict(peak_objs_by_chrm[key]['+'][0].pvalues).keys()
-            print "+ used"
-            return output_cols
-            #except: return output_cols
+            len(peak_objs_by_chrm[key]['+']) > 0):
+            try:
+                output_cols += dict(peak_objs_by_chrm[key]['+'][0].gene).keys()
+                output_cols += dict(peak_objs_by_chrm[key]['+'][0].pvalues).keys()
+                print "+ used"
+                return output_cols
+            except: return output_cols
         elif ('-' in peak_objs_by_chrm[key]) and (
-            peak_objs_by_chrm[key]['-'] is not None):
+            len(peak_objs_by_chrm[key]['-']) > 0):
             #try:
             output_cols += dict(peak_objs_by_chrm[key]['-'][0].gene).keys()
             output_cols += dict(peak_objs_by_chrm[key]['-'][0].pvalues).keys()
@@ -116,28 +135,35 @@ def define_output_cols(peak_objs_by_chrm):
 
 
 def convert_peak_objs_to_table(peak_objs_by_chrm):
+    print inspect.currentframe().f_code.co_name
     total_peaks = 0
     for chrm in peak_objs_by_chrm:
         for strand in peak_objs_by_chrm[chrm]:
             total_peaks += len(peak_objs_by_chrm[chrm][strand])
+    if total_peaks == 0: return None
     logger.info(
         'Converting %i peak objects in %i chromosomes to a pandas.DataFrame.' % (
             total_peaks, len(peak_objs_by_chrm)))
     # Convert to a table and write.
     peak_list = []
     output_cols = define_output_cols(peak_objs_by_chrm)
-    print "-=== output cols:"
-    print output_cols
     for chrm in peak_objs_by_chrm:
         for strand in peak_objs_by_chrm[chrm]:
-            for p in peak_objs_by_chrm[chrm][strand]:
+            for i, p in enumerate(peak_objs_by_chrm[chrm][strand]):
+#                if i < 10: print p
                 row = [p.chrm, p.left, p.right, p.strand, p.height]#, p.max_bin]
                 if not hasattr(p, 'gene') or p.gene is None:
                     continue
                 row += [str(p.gene[key]) for key in dict(p.gene).keys()]
                 row += [str(p.pvalues[key]) for key in dict(p.pvalues).keys()]
-                if len(row) != len(output_cols): continue
+                if len(row) != len(output_cols):
+                    print "row len %i col len %i" % (len(row), len(output_cols))
+                    continue
                 peak_list.append(row)
+    print "Loaded %i peaks" % len(peak_list)
+    if len(peak_list) < 1:
+        print "Empty peak objects object!"
+        return None
     peak_table = pandas.DataFrame(peak_list, columns=output_cols)
     peak_table = peak_table[peak_table['transcript_id']!='na']
     peak_table.to_csv('peak_table.txt', sep='\t', index=False)
@@ -151,6 +177,7 @@ def convert_peak_objs_to_table(peak_objs_by_chrm):
 
 
 def load_and_combine_replicates(config):
+    print inspect.currentframe().f_code.co_name
     combined = {}
     peaks_by_hypothesis = collections.defaultdict(dict)
     rep_dir_names = [
@@ -166,8 +193,6 @@ def load_and_combine_replicates(config):
     for rep_name in rep_dir_names:
         for filename in glob.glob(rep_name + '/*.txt'):
             all_hypothesis |= set([os.path.basename(filename)])
-    print 'locals'
-    print locals()
     for hypothesis in all_hypothesis:
         for rep_name in rep_dir_names:
             filename = '%s/%s' % (rep_name, hypothesis)
@@ -228,20 +253,25 @@ def to_list(pob):
 
 
 def load_tables_of_cwt_peak_calls(config, args):
+    print inspect.currentframe().f_code.co_name
     logger.info(
         '''CWT peak calls will be made using the configuration data %s.
         If successful, tables will be written to data/cwt_calls/.''' % str(config))
     peak_tables = {}
     for clip_replicate in config['clip_replicate']:
-        clip_replicate = re.sub('_[-]\.wig', '.wig', clip_replicate)
-        if not args.just_stats:
-            peak_tables[clip_replicate] = call_peaks_by_cwt_on_replicate(
-                clip_replicate, config, load_data=not args.overwrite)
-        else:
+        clip_replicate = re.sub('_[-+]\.wig', '.wig', clip_replicate)
+        if args.just_stats:
             peak_tables[clip_replicate] = pandas.read_csv(
                 'data/%s/cwt_calls/' % config['experiment_name'] \
                 + os.path.basename(clip_replicate),
                 sep='\t')
+        else:
+            a_table = call_peaks_by_cwt_on_replicate(
+                clip_replicate, config, load_data=not args.overwrite)
+            if a_table is not None:
+                peak_tables[clip_replicate] = a_table
+            else:
+                print "Got a None value for %s" % clip_replicate
     return peak_tables
 
 
@@ -313,11 +343,9 @@ def load_peaks_with_stats_and_apply_fdr_and_write(
 
 def call(args, config, gtf_l, ga_raw, do_start_logger=True,
          skip_nb=False):
+    print inspect.currentframe().f_code.co_name
+    #args.overwrite = False
     print 'Calling peaks...'
-    for k in config:
-        print k
-        print config[k]
-    print "\n" * 100
     if do_start_logger: start_logger(config['experiment_name'])
     logger.info('Experiment bedfiles {d}'.format(
         d=ga_raw.keys()[0]))
@@ -331,7 +359,18 @@ def call(args, config, gtf_l, ga_raw, do_start_logger=True,
     # If args.overwrite is False and the .p objects exist, they will be loaded.
     peak_tables = load_tables_of_cwt_peak_calls(config, args)
     print "Made peak tables:"
-    print peak_tables
+    if peak_tables is None:
+        print "Peak tables is None. Ending."
+        return
+    for k in peak_tables:
+        print "\nTable for %s:\n" % k
+        if peak_tables[k] is None:
+            print "Peak table for %s is None." % k
+            continue
+        if len(peak_tables[k].index) > 0:
+            print peak_tables[k].head(1)
+        else:
+            print "Peak table for %s is empty." % k
     logger.info('call(): Finished loading/creating %i cwt tables: %s' % (
         len(peak_tables), str([str(peak_tables[x]) for x in peak_tables])
     ))
@@ -394,15 +433,13 @@ if __name__ == '__main__':
         help='Skip the NB calculation for speed (Default: False)'
     )
     args = parser.parse_args()
-    config = read_config(args.config)
+    lib = config.config(filepath=args.config)
     # Load high RAM data. Slow.
     print "Loading GTF..."
-    gtf_data = get_gtf(args, config)
+    gtf_data = get_gtf(args, lib)
     ga_raw = {}
     print "Loading bed files..."
-    for clip_replicate in config['clip_replicate']:
+    for clip_replicate in lib['clip_replicate']:
         ga_raw[clip_replicate] = peak_calling_tools.load_bed_file(
-            config['bed_dir'] + '/' + os.path.basename(clip_replicate).partition('wig')[0] + 'bed')
-    print("callpeaks.py ga_raw():")
-    print(ga_raw)
-    call(args, config, gtf_data, ga_raw)
+            lib['bed_dir'] + '/' + os.path.basename(clip_replicate).partition('wig')[0] + 'bed')
+    call(args, lib, gtf_data, ga_raw)

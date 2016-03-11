@@ -45,7 +45,8 @@ import argparse
 import HTSeq
 import collections
 import numpy as np
-
+import config
+import os
 def get_val(ga, iv):
     return np.max(np.fromiter(ga[iv], dtype=np.float))
 
@@ -88,34 +89,6 @@ def add_strand_to_ga_from_bedgraph_file(fname, ga, strand):
     return ga
 
 
-def read_config(filename):
-    """Expect:
-experiment_name\tname  # Optional.
-clip_replicate\tfilename1.wig
-clip_replicate\tfilename2.wig
-clip_replicate\tfilename3.wig
-gtf_filename\tgtf_filename
-rna_seq_filename\tfilename
-neg_ip_filename\tfilename
-positive_control_genes\tname1;name2;name3;
-motif\ttgt\w\w\wat
-    """
-    config = collections.defaultdict(list)
-    with open(filename, 'r') as f:
-        for li in f:
-            li = li.partition('#')[0]  # Skip comments.
-            if li == '': continue
-            s = li.rstrip('\n').split('\t')
-            try: config[s[0]].append(s[1])
-            except: print "Error parsing line %s in config file. Wrong length?" % li
-    for key in config:
-        if len(config[key]) == 1:
-            config[key] = config[key][0]
-        if key == 'positive_control_genes':
-            config[key] = config[key].split(';')
-    if 'experiment_name' not in config:
-        config['experiment_name'] = os.path.basename(filename)
-    return config
 
 def get_bed_size(fname):
     return float(len(open(fname).readlines()))
@@ -178,7 +151,7 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output')
     args = parser.parse_args()
     args.ratio_cutoff = float(args.ratio_cutoff)
-    config = read_config(args.config)
+    lib = config.config(filepath=args.config)
     header = open(args.peaks_fname).readline()
     if (re.search('depth_exp', header) is not None) and (
         re.search('depth_control', header) is not None):
@@ -187,15 +160,18 @@ if __name__ == '__main__':
         answer = raw_input('(Y/N?) >')
         print answer
         if answer[0].upper() == 'Y':
-            peaks = add_read_columns(args, config)
+            peaks = add_read_columns(args, lib)
             peaks = add_sum_and_ratio_columns(peaks)
             peaks.to_csv(args.peaks_fname, sep='\t', index=False)
         else:
             print "Using the existing columns then..."
     else:
-        peaks = add_read_columns(args, config)
+        peaks = add_read_columns(args, lib)
         peaks = add_sum_and_ratio_columns(peaks)
         peaks.to_csv(args.peaks_fname, sep='\t', index=False)
+    peaks = pandas.read_csv(args.peaks_fname, sep='\t')
     peaks = peaks[peaks['ratio']>=args.ratio_cutoff]
+    if not os.path.exists(os.path.dirname(args.output)):
+        os.system('mkdir ' + os.path.dirname(args.output))
     peaks.to_csv(args.output, sep='\t', index=False)
 

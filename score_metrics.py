@@ -1,7 +1,7 @@
 #import callpeaks
 from callpeaks import get_sequences
 from rc import rc
-from callpeaks import read_config
+import config
 import glob
 import os
 import pandas
@@ -79,7 +79,7 @@ def score_positives(peaks, config=None):
         return {'observed positives': set([]), 'number of observed positives': 0,
             'missing positives': set([]), 'number of missing positives': 0,
             'expected': 0}
-    positives = config['positive_control_genes'].split(',')
+    positives = config['positive_control_genes']
     print 'score_positives'
     print positives
     known_pos = set(positives)
@@ -92,6 +92,7 @@ def score_positives(peaks, config=None):
             'missing positives': missing_pos, 'number of missing positives': missing_pos_n,
             'expected': len(list(known_pos))}
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -101,5 +102,5 @@ if __name__ == '__main__':
         '-p', '--peak_dir', default='peaks',
     )
     args = parser.parse_args()
-    config = read_config(args.config)
-    score_metrics(args.peak_dir, config)
+    lib = config.config(filepath=args.config)
+    score_metrics(args.peak_dir, lib)

@@ -1,6 +1,7 @@
 import ConfigParser
 #import sys
 import os
+import re
 
 def config(filepath=None):
     Config = ConfigParser.ConfigParser()
@@ -11,6 +12,14 @@ def config(filepath=None):
     else:
         Config.read(filepath)
     lib = ConfigSectionMap('library', Config)
+    lib['clip_replicate'] = [lib[x] for x in lib.keys() if\
+                                 re.match('clip_replicate.*', x)]
+    lib['clip_replicate_bed'] = [lib[x] for x in lib.keys() if\
+                                 re.match('exp_bed.*', x)]
+    lib['positive_control_genes'] = lib['positive_control_genes'].split(
+        ',')
+    if 'experiment_name' not in lib:
+        lib['experiment_name'] = os.path.basename(__file__)
     return lib
 
  
