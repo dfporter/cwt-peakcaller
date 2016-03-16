@@ -1,9 +1,4 @@
 """
-The foolish original definitions of the configfile are felt here:
-the replicates were given as paths to .wig files (as though nonstranded
-bedgraphs were used, but they aren't), and the control datasets to
-bed files (that do exist), and every path is sort of filled out backwards
-from that. 
 
 A second version of the config file settings would be the config.ini format:
 
@@ -47,16 +42,16 @@ import collections
 import numpy as np
 import config
 import os
+
+
 def get_val(ga, iv):
     return np.max(np.fromiter(ga[iv], dtype=np.float))
-
 
 
 def add_heights_to_peak_file(peak_fname, bed_ga_dict):
     peaks = pandas.read_csv(peak_fname, sep='\t')
     ivs = zip(peaks['chrm'].tolist(), peaks['left'].tolist(),
         peaks['right'].tolist(), peaks['strand'].tolist())
-    print ivs
     for bedgraph_name in bed_ga_dict:
         peaks[bedgraph_name] =  [
             get_val(bed_ga_dict[bedgraph_name], HTSeq.GenomicInterval(*iv)
@@ -132,23 +127,54 @@ def add_sum_and_ratio_columns(peaks):
     exp_cols = [col for col in peaks.columns if re.search('depth_exp_', col)]
     control_cols = [col for col in peaks.columns\
                     if re.search('depth_control_', col)]
+    peaks['ratio'] = -1
+    peaks['exp'] = 0
+    peaks['control'] = 0
     for i, row in peaks.iterrows():
-        peaks.loc[i, 'exp'] = sum([
+        exp = sum([
             peaks.loc[i, col] for col in exp_cols])/float(len(exp_cols))
-        peaks.loc[i, 'control'] = sum([
+        control = sum([
             peaks.loc[i, col] for col in control_cols])/float(len(control_cols))
-        peaks.loc[i, 'ratio'] = float(peaks.loc[i, 'exp'])\
-                                /float(max([1., row['control']]))
+        ratio = exp/max([1., float(control)])
+        peaks.loc[i, 'exp'] = exp
+        peaks.loc[i, 'control'] = control
+        peaks.loc[i, 'ratio'] = ratio
+        print '{a}/{b} = {c}'.format(
+            a=exp, b=control, c=ratio)
+        #peaks.loc[i, 'ratio'] = -100
     return peaks
 
+
+def get_bedgraph_to_bed_size(lib):
+    bedgraph_basenames = dict([(os.path.basename(x).partition('.wig')[0], x) \
+        for x in lib['clip_replicate']])
+    bed_basenames = dict([(os.path.basename(x).partition('.bed')[0], x) \
+        for x in lib['clip_replicate_bed']])
+    print bedgraph_basenames
+    print bed_basenames
+    bedgraph_to_bed = dict([(bedgraph_basenames[x], bed_basenames[x]) for \
+        x in bedgraph_basenames])
+    bedgraph_negative = "{a}/{b}.wig".format(a=lib['bedgraphs_folder'], 
+        b=os.path.basename(lib['neg_ip_filename'].partition('.bed')[0]))
+    print bedgraph_to_bed
+    bed_size = dict([(x, sum([1 for x in open(bedgraph_to_bed[x]).readlines()])) \
+        for x in bedgraph_to_bed])
+    bed_size[bedgraph_negative] = sum([1 for x in \
+        open(lib['neg_ip_filename']).readlines()])
+    print bed_size
+    return bed_size
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description='''
+Loads an unnormalized bedgraph file and determines the maximum coverage\
+ in each peak region. Bed files are loaded and used to normalize the \
+read depths to per billion. Ratio cutoffs are applied to this ratio.''')
     parser.add_argument('-p', '--peaks_fname',
                         help='Filename of peaks file.')
     parser.add_argument('-c', '--config')
     parser.add_argument('-r', '--ratio_cutoff',
                         help='Enrichment ratio cutoff.')
-    parser.add_argument('-o', '--output')
+    parser.add_argument('-o', '--output', default='output.txt')
     args = parser.parse_args()
     args.ratio_cutoff = float(args.ratio_cutoff)
     lib = config.config(filepath=args.config)

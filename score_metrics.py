@@ -8,23 +8,29 @@ import pandas
 import re
 import argparse
 
-def score_metrics(dir_name, config):
+
+def score_metrics(dir_name, config, include_ncrna=False):
     """Score metrics for every peaks file in a directory.
 dir_name: directory name
 config: dict of lib info
     """
-    fname_list = glob.glob(dir_name + '/*.txt')
+    if os.path.isdir(dir_name):
+        fname_list = glob.glob(dir_name + '/*.txt')
+    elif os.path.isfile(dir_name):
+        fname_list = [dir_name]
+    else:
+        fname_list = []
     li = ""
     for filename in sorted(fname_list, key=lambda x: os.path.basename(x)):
         print "Scoring metrics for %s" % filename
-        li += score_metric(filename, config=config)
+        li += score_metric(filename, config=config, include_ncrna=include_ncrna)
     with open('score_metrics_%s.txt' % config['experiment_name'], 'w') as f:
         f.write(li)
     return li
 
 
 def score_metric(filename, label="", given_peaks=False, peaks=False,
-                 config=None):
+                 config=None, include_ncrna=False):
     if not label:
         label = os.path.basename(filename)
     if not given_peaks:
@@ -32,6 +38,14 @@ def score_metric(filename, label="", given_peaks=False, peaks=False,
             return "No peaks."
         else:
             peaks = pandas.read_csv(filename, sep='\t')
+            if not include_ncrna:
+                if 'biotype' not in peaks.columns:
+                    print('Asked to not count ncRNA, but not biotype column found')
+                else:
+                    len_all = len(peaks.index)
+                    peaks = peaks[peaks['biotype']=='protein_coding']
+                    print "Removed ncRNA: %i peaks input > %i after ncRNA removal" % (
+                        len_all, len(peaks.index))
     if len(peaks.index) == 0:
         return "No peaks."
     get_sequences(peaks, fasta_filename=config['fasta'])
@@ -101,6 +115,10 @@ if __name__ == '__main__':
     parser.add_argument(
         '-p', '--peak_dir', default='peaks',
     )
+    parser.add_argument(
+        '-n', '--include_ncrna',
+        action='store_true', default=False
+    )
     args = parser.parse_args()
     lib = config.config(filepath=args.config)
-    score_metrics(args.peak_dir, lib)
+    score_metrics(args.peak_dir, lib, include_ncrna=args.include_ncrna)
