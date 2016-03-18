@@ -89,15 +89,16 @@ def get_bed_size(fname):
     return float(len(open(fname).readlines()))
 
 
-def add_read_columns(args, config):
+def add_read_columns(args, config, bedfiles=None):
     non_control = {}
-    bedfiles = {'control': "{a}/{b}.wig".format(
-        a=os.path.dirname(config['clip_replicate'][0]),
-        b=os.path.basename(config['neg_ip_filename']).rstrip('.bed'))}
-    for x in config['clip_replicate']:
-        name = os.path.basename(x).rstrip('.bed').rstrip('.wig')
-        bedfiles[name] = x
-        non_control[name] = x
+    if bedfiles is None:
+        bedfiles = {'control': "{a}/{b}.wig".format(
+            a=os.path.dirname(config['clip_replicate'][0]),
+            b=os.path.basename(config['neg_ip_filename']).rstrip('.bed'))}
+        for x in config['clip_replicate']:
+            name = os.path.basename(x).rstrip('.bed').rstrip('.wig')
+            bedfiles[name] = x
+            non_control[name] = x
     ga_d = {}
     print "Loading bedgraphs..."
     for name in bedfiles:
@@ -198,6 +199,7 @@ read depths to per billion. Ratio cutoffs are applied to this ratio.''')
     peaks = pandas.read_csv(args.peaks_fname, sep='\t')
     peaks = peaks[peaks['ratio']>=args.ratio_cutoff]
     if not os.path.exists(os.path.dirname(args.output)):
-        os.system('mkdir ' + os.path.dirname(args.output))
+        if len(os.path.dirname(args.output)):
+            os.system('mkdir ' + os.path.dirname(args.output))
     peaks.to_csv(args.output, sep='\t', index=False)
 
