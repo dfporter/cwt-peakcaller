@@ -27,11 +27,11 @@ bed = bed[0]
 unnorm_bedgraph = unnorm_bedgraph[0]
 controlbeds = [x for x in glob.glob(bed + '/*.bed') if re.search('control', x)]
 controlbeds = sorted(controlbeds, key=lambda x: len(x))
-rnaseqbeds = [x for x in glob.glob(bed + '/*.bed') if re.search('seq', x)]
+rnaseqbeds = [x for x in glob.glob(bed + '/*.bed') if re.search('control', x)]
 rnaseqbeds = sorted(rnaseqbeds, key=lambda x: len(x))
 exp_beds = [x for x in glob.glob(bed + '/*.bed') if re.search('exp', x)]
 clip_reps = [x for x in glob.glob(unnorm_bedgraph + '/*.wig') if \
-    re.search('exp', x)]
+    re.search('fbf', x)]
 clip_reps = list(set([re.sub('_[\+-]\.wig', '.wig', x) for x in \
                  clip_reps]))
 #for rep in clip_reps:

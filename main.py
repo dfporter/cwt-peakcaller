@@ -12,6 +12,7 @@ import add_signal
 import peak
 import NBin
 import re
+import config
 
 def load_args():
     parser = argparse.ArgumentParser(description='''
@@ -56,15 +57,10 @@ def load_args():
 
 if __name__ == '__main__':
     args = load_args()
-    if re.search('\.ini', args.config):
-        #sys.path.insert(0, args.config)
-        import config
-        lib = config.config(filepath=args.config)
-        print lib['clip_replicate']
-    else:
-        lib = callpeaks.read_config(args.config)
+    lib = config.config(filepath=args.config)
+    print lib['clip_replicate']
     ga_raw = {}
-    print lib
+    print "\n".join(sorted([":".join([k, str(v)]) for k, v in lib.items()]))
     callpeaks.start_logger(lib['experiment_name'])
     print "Loading bed files..."
     ga_raw['neg_ip'] = peak_calling_tools.load_bed_file(lib['neg_ip_filename'])

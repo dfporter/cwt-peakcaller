@@ -16,6 +16,9 @@ def config(filepath=None):
                                  re.match('clip_replicate.*', x)]
     lib['clip_replicate_bed'] = [lib[x] for x in lib.keys() if\
                                  re.match('exp_bed.*', x)]
+    if len(lib['clip_replicate']) == 0:
+        lib['clip_replicate'] = [
+          lib['bedgraphs_folder'] + '/' + os.path.basename(x).partition('.bed')[0] + '.wig' for x in lib['clip_replicate_bed']]
     lib['positive_control_genes'] = lib['positive_control_genes'].split(
         ',')
     if 'experiment_name' not in lib:

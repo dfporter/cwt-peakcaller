@@ -11,6 +11,8 @@ import time
 import datetime
 import collections
 import sys
+import inspect
+
 from rc import rc
 import config
 from get_sequences import get_sequences
@@ -43,7 +45,7 @@ def any_have_na(peak_objs):
     if not has_na:
         logger.info("No peaks have na height.")
 
-import inspect
+
 def call_peaks_by_cwt_on_replicate(clip_wig_filename, config, load_data=False):
     """Calls or loads CWT peaks for a wig filename.
     In: filename of .wig, config data.
@@ -200,7 +202,7 @@ def load_and_combine_replicates(config):
                 logger.error('Missing peaks filename %s' % filename)
                 continue
             peaks_by_hypothesis[hypothesis][
-                rep_name] = pandas.read_csv(filename, sep='\t')
+                rep_name] = pandas.read_csv(filename, sep='\t', index_col=False)
             li = "Peaks list %s comprises %i peaks." % (
                 filename, len(peaks_by_hypothesis[hypothesis][rep_name]))
             logging.info(li)
@@ -354,7 +356,6 @@ def call(args, config, gtf_l, ga_raw, do_start_logger=True,
         'rm -r data/{a}/cwt_calls/'.format(a=config['experiment_name']))
     if args.overwrite: os.system(
         'rm -r data/{a}/peaks_with_stats/'.format(a=config['experiment_name']))
-
     # Outputs pickled CWT call objects to data/raw_* and peak tables to data/cwt_calls.
     # If args.overwrite is False and the .p objects exist, they will be loaded.
     peak_tables = load_tables_of_cwt_peak_calls(config, args)

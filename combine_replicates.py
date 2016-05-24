@@ -104,13 +104,6 @@ def combine_peaks_not_pandas(replicates, min_num_reps=1, output_dir='peaks/',
     return overlapping_peak_rows
 
 
-def consensus_peaks_not_pandas(overlapping, gene_ranges):
-    # Do these peak ranges overlap?
-    # Whenever two ranges overlap, take the highest.
-    remove_peaks_that_overlap_with_higher_peak(overlapping, _ranges)
-    return list_of_highest
-
-
 def remove_peaks_that_overlap_with_higher_peak(
             overlapping, gene_ranges, verbose=False):
     still_overlapping = True
