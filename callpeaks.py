@@ -278,16 +278,9 @@ def load_tables_of_cwt_peak_calls(config, args):
 
 
 def get_gtf(args, config):
-    if args.load_gtf:
-        with open('lib/gtf_as_dict.p', 'rb') as f:
-            as_d = pickle.load(f)
-            return as_d
-    else:
-        gtf_d = add_signal.df_to_dict(
-            pandas.read_csv(config['gtf_filename'], sep='\t'))
-        with open('lib/gtf_as_dict.p', 'wb') as f:
-            pickle.dump(gtf_d, file=f)
-        return gtf_d
+    gtf_d = add_signal.df_to_dict(
+        pandas.read_csv(config['gtf_filename'], sep='\t'))
+    return gtf_d
 
 
 def add_reads_to_peaks_and_return_peak_objects(peak_table, config, gtf_l, clip_replicate):

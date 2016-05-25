@@ -76,6 +76,12 @@ def combine_peaks_not_pandas(replicates, min_num_reps=1, output_dir='peaks/',
             else:
                 pass
         if not os.path.exists(output_dir): os.system('mkdir ' + output_dir)
+        if (len(repnames) < 3) or (len(set([repnames[0], repnames[1], repnames[2], 
+               tuple(sorted([repnames[0], repnames[1]])),
+               tuple(sorted([repnames[0], repnames[2]])),
+               tuple(sorted([repnames[1], repnames[2]])),
+               tuple(sorted(repnames))]) - set(vennreps.keys())) > 0):
+            return overlapping_peak_rows
         plt.clf()
         subsets=[
                 # Unique to repnames[0]

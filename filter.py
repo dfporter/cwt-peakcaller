@@ -61,6 +61,7 @@ def add_heights_to_peak_file(peak_fname, bed_ga_dict):
 
 def load_bedgraph_file(fname, add_strand=True):
     fname = fname.rstrip('.bed')
+    print "Loading {0}..".format(fname)
     ga = HTSeq.GenomicArray(chroms='auto', stranded=True)
     if add_strand:
         plus_file = fname.partition('.wig')[0] + '_+.wig'
@@ -92,9 +93,9 @@ def get_bed_size(fname):
 def add_read_columns(args, config, bedfiles=None):
     non_control = {}
     if bedfiles is None:
-        bedfiles = {'control': "{a}/{b}.wig".format(
-            a=os.path.dirname(config['clip_replicate'][0]),
-            b=os.path.basename(config['neg_ip_filename']).rstrip('.bed'))}
+        bedfiles = {'control': "{0}/{1}.wig".format(
+            os.path.dirname(config['clip_replicate'][0]),
+            os.path.basename(config['neg_ip_filename']).rstrip('.bed'))}
         for x in config['clip_replicate']:
             name = os.path.basename(x).rstrip('.bed').rstrip('.wig')
             bedfiles[name] = x

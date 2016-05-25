@@ -1,3 +1,4 @@
+#!/usr/bin/python
 #import callpeaks
 from callpeaks import get_sequences
 from rc import rc

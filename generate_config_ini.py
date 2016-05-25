@@ -8,6 +8,7 @@ try:
     indir = sys.argv[1]
 except:
     indir = '.'
+indir = os.path.realpath(indir)
 folders = glob.glob(indir + '/*/')
 folders = [x for x in folders if not re.search('backup', x)]
 bedgraphs = [x for x in folders if (
@@ -30,14 +31,13 @@ controlbeds = sorted(controlbeds, key=lambda x: len(x))
 rnaseqbeds = [x for x in glob.glob(bed + '/*.bed') if re.search('control', x)]
 rnaseqbeds = sorted(rnaseqbeds, key=lambda x: len(x))
 exp_beds = [x for x in glob.glob(bed + '/*.bed') if re.search('exp', x)]
-clip_reps = [x for x in glob.glob(unnorm_bedgraph + '/*.wig') if \
-    re.search('fbf', x)]
-clip_reps = list(set([re.sub('_[\+-]\.wig', '.wig', x) for x in \
-                 clip_reps]))
+clip_reps = [
+   unnorm_bedgraph + '/' + os.path.basename(x).partition('.bed')[0] \
+   + '.wig' for x in exp_beds]
 #for rep in clip_reps:
 #    rep = re.sub('_[\+-].wig', '.wig', rep)
 lib_folders = [x for x in folders if re.search('lib', x)]
-lib = '/groups/Kimble/Common/fog_iCLIP/calls/lib/'
+lib = '/opt/lib/'
 fasta = lib + 'mtDNA.fa'
 gtf = lib + 'gtf_with_names_column.txt'
 if len(lib_folders) > 0:
@@ -57,6 +57,11 @@ li = """
 [library]
 top: {top}
 lib: {lib}
+""".format(
+top=indir,
+lib=lib,
+)
+li_2 = """
 gtf: {gtf}
 gtf_filename: {gtf}
 fasta: {fasta}
@@ -93,5 +98,8 @@ cr2=clip_reps[1],
 cr3=clip_reps[2],
 seq=rnaseqbeds[0]
 )
+li_2 = re.sub(lib, "%(lib)s/", li_2)
+li_2 = re.sub(indir, "%(top)s/", li_2)
+li = li + li_2
 print li
 with open('auto.ini', 'w') as f: f.write(li)
