@@ -19,7 +19,7 @@ motif\ttgt\w\w\wat
             if li == '': continue
             s = li.rstrip('\n').split('\t')
             try: config[s[0]].append(s[1])
-            except: print "Error parsing line %s in config file. Wrong length?" % li
+            except: print("Error parsing line %s in config file. Wrong length?" % li)
     for key in config:
         if len(config[key]) == 1:
             config[key] = config[key][0]

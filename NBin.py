@@ -19,7 +19,8 @@ def info(arr):
         mn=np.nanmean(arr), med=np.nanmedian(arr), var=np.nanvar(arr)
     )
 
-def likelihood_f((n,p), x):
+def likelihood_f(xxx_todo_changeme, x):
+        (n,p) = xxx_todo_changeme
         return -1 * np.sum([scipy.stats.nbinom.logpmf(an_obs, n, p) for an_obs in x])
 
 def fit_params(obs,just_positives=False, raise_background=False):
@@ -29,7 +30,7 @@ def fit_params(obs,just_positives=False, raise_background=False):
         if np.max(obs) <= 0: return None
         pos_vals = [x for x in obs if (x > 0)]
     except:
-        print "failure on {o}".format(o=obs)
+        print("failure on {o}".format(o=obs))
         return None
     if just_positives:
         obs = [x for x in obs if x>0]
@@ -68,10 +69,10 @@ if __name__ == '__main__':
     arr2d = generate_data(10.)
     wrapped = wrapper(process, arr2d)
     took = timeit.timeit(wrapped, number=num_arr)/60.
-    print "Time to fit {v} arrays: \
+    print("Time to fit {v} arrays: \
     {t} m. Would take {m} h to run on 6 * 1e4 arrays.".format(
         t=took, m=float(6*1e4*took)/(60.*num_arr*len(arr2d)),
-        v=num_arr*len(arr2d))
+        v=num_arr*len(arr2d)))
     
 
 

@@ -22,7 +22,7 @@ config: dict of lib info
         fname_list = []
     li = ""
     for filename in sorted(fname_list, key=lambda x: os.path.basename(x)):
-        print "Scoring metrics for %s" % filename
+        print("Scoring metrics for %s" % filename)
         li += score_metric(filename, config=config, include_ncrna=include_ncrna)
     with open('score_metrics_%s.txt' % config['experiment_name'], 'w') as f:
         f.write(li)
@@ -44,8 +44,8 @@ def score_metric(filename, label="", given_peaks=False, peaks=False,
                 else:
                     len_all = len(peaks.index)
                     peaks = peaks[peaks['biotype']=='protein_coding']
-                    print "Removed ncRNA: %i peaks input > %i after ncRNA removal" % (
-                        len_all, len(peaks.index))
+                    print("Removed ncRNA: %i peaks input > %i after ncRNA removal" % (
+                        len_all, len(peaks.index)))
     if len(peaks.index) == 0:
         return "No peaks."
     get_sequences(peaks, fasta_filename=config['fasta'])
@@ -94,8 +94,8 @@ def score_positives(peaks, config=None):
             'missing positives': set([]), 'number of missing positives': 0,
             'expected': 0}
     positives = config['positive_control_genes']
-    print 'score_positives'
-    print positives
+    print('score_positives')
+    print(positives)
     known_pos = set(positives)
     obs_genes = set(peaks['gene_name'])
     obs_pos = known_pos & obs_genes

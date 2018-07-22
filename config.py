@@ -1,20 +1,20 @@
-import ConfigParser
+import configparser
 #import sys
 import os
 import re
 
 def config(filepath=None):
-    Config = ConfigParser.ConfigParser()
+    Config = configparser.ConfigParser()
     src_dir = os.path.dirname(os.path.realpath(__file__))
     if filepath is None:
-        print "src_dir for config.py is {a}".format(a=src_dir)
+        print("src_dir for config.py is {a}".format(a=src_dir))
         Config.read(src_dir + "/config.ini")
     else:
         Config.read(filepath)
     lib = ConfigSectionMap('library', Config)
-    lib['clip_replicate'] = [lib[x] for x in lib.keys() if\
+    lib['clip_replicate'] = [lib[x] for x in list(lib.keys()) if\
                                  re.match('clip_replicate.*', x)]
-    lib['clip_replicate_bed'] = [lib[x] for x in lib.keys() if\
+    lib['clip_replicate_bed'] = [lib[x] for x in list(lib.keys()) if\
                                  re.match('exp_bed.*', x)]
     if len(lib['clip_replicate']) == 0:
         lib['clip_replicate'] = [
@@ -35,6 +35,6 @@ def ConfigSectionMap(section, Config):
             if dict1[option] == -1:
                 DebugPrint("skip: %s" % option)
         except:
-            print("exception on %s!" % option)
+            print(("exception on %s!" % option))
             dict1[option] = None
     return dict1

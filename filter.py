@@ -50,8 +50,8 @@ def get_val(ga, iv):
 
 def add_heights_to_peak_file(peak_fname, bed_ga_dict):
     peaks = pandas.read_csv(peak_fname, sep='\t')
-    ivs = zip(peaks['chrm'].tolist(), peaks['left'].tolist(),
-        peaks['right'].tolist(), peaks['strand'].tolist())
+    ivs = list(zip(peaks['chrm'].tolist(), peaks['left'].tolist(),
+        peaks['right'].tolist(), peaks['strand'].tolist()))
     for bedgraph_name in bed_ga_dict:
         peaks[bedgraph_name] =  [
             get_val(bed_ga_dict[bedgraph_name], HTSeq.GenomicInterval(*iv)
@@ -100,7 +100,7 @@ def add_read_columns(args, config, bedfiles=None):
             bedfiles[name] = x
             non_control[name] = x
     ga_d = {}
-    print "Loading bedgraphs..."
+    print("Loading bedgraphs...")
     for name in bedfiles:
         ga_d[name] = load_bedgraph_file(bedfiles[name])
     peaks = add_heights_to_peak_file(args.peaks_fname, ga_d)
@@ -112,9 +112,9 @@ def add_read_columns(args, config, bedfiles=None):
             peaks[col_name] = [
                 1e6 * x/size[bedgraph] for x in peaks[bedgraph].tolist()]
             continue
-        print config['bed_dir']
-        print bedgraph
-        print os.path.basename(bedgraph).rstrip('.wig')
+        print(config['bed_dir'])
+        print(bedgraph)
+        print(os.path.basename(bedgraph).rstrip('.wig'))
         bed_file = config['bed_dir'] +'/' + \
                    os.path.basename(bedgraph).rstrip('.wig') + '.bed'
         size[bedgraph] = get_bed_size(bed_file)
@@ -140,8 +140,8 @@ def add_sum_and_ratio_columns(peaks):
         peaks.loc[i, 'exp'] = exp
         peaks.loc[i, 'control'] = control
         peaks.loc[i, 'ratio'] = ratio
-        print '{a}/{b} = {c}'.format(
-            a=exp, b=control, c=ratio)
+        print('{a}/{b} = {c}'.format(
+            a=exp, b=control, c=ratio))
         #peaks.loc[i, 'ratio'] = -100
     return peaks
 
@@ -151,18 +151,18 @@ def get_bedgraph_to_bed_size(lib):
         for x in lib['clip_replicate']])
     bed_basenames = dict([(os.path.basename(x).partition('.bed')[0], x) \
         for x in lib['clip_replicate_bed']])
-    print bedgraph_basenames
-    print bed_basenames
+    print(bedgraph_basenames)
+    print(bed_basenames)
     bedgraph_to_bed = dict([(bedgraph_basenames[x], bed_basenames[x]) for \
         x in bedgraph_basenames])
     bedgraph_negative = "{a}/{b}.wig".format(a=lib['bedgraphs_folder'], 
         b=os.path.basename(lib['neg_ip_filename'].partition('.bed')[0]))
-    print bedgraph_to_bed
+    print(bedgraph_to_bed)
     bed_size = dict([(x, sum([1 for x in open(bedgraph_to_bed[x]).readlines()])) \
         for x in bedgraph_to_bed])
     bed_size[bedgraph_negative] = sum([1 for x in \
         open(lib['neg_ip_filename']).readlines()])
-    print bed_size
+    print(bed_size)
     return bed_size
 
 if __name__ == '__main__':
@@ -182,16 +182,16 @@ read depths to per billion. Ratio cutoffs are applied to this ratio.''')
     header = open(args.peaks_fname).readline()
     if (re.search('depth_exp', header) is not None) and (
         re.search('depth_control', header) is not None):
-        print "Peaks file appears to already have read count columns.\
- Overwrite them?"
-        answer = raw_input('(Y/N?) >')
-        print answer
+        print("Peaks file appears to already have read count columns.\
+ Overwrite them?")
+        answer = input('(Y/N?) >')
+        print(answer)
         if answer[0].upper() == 'Y':
             peaks = add_read_columns(args, lib)
             peaks = add_sum_and_ratio_columns(peaks)
             peaks.to_csv(args.peaks_fname, sep='\t', index=False)
         else:
-            print "Using the existing columns then..."
+            print("Using the existing columns then...")
     else:
         peaks = add_read_columns(args, lib)
         peaks = add_sum_and_ratio_columns(peaks)

@@ -8,28 +8,44 @@ try:
     indir = sys.argv[1]
 except:
     indir = '.'
+
 folders = glob.glob(indir + '/*/')
 folders = [x for x in folders if not re.search('backup', x)]
+
 bedgraphs = [x for x in folders if (
     re.search('bedgraph', x) or re.search('wig', x))]
+
 #norm_bedgraph = [x for x in bedgraphs if (
 #    re.search('norm', x) and not re.search('unnorm', x))]
+
 unnorm_bedgraph = [x for x in bedgraphs if (
     re.search('unnorm', x))]
+
 bed = [x for x in folders if (
     re.search('bed', x) and (x not in bedgraphs) and not re.search('uncollapse', x))]
+
+print('Identified {} as an unnormalized bedgraphs folder, and {} as the bed folder.'.format(
+    unnorm_bedgraph[0], bed[0]))
+
 for fn in [bed,  unnorm_bedgraph]:
     if len(fn) > 1:
-        print fn
+        print("Could not distinguish between potential input directories {}".format(fn))
         sys.exit()
+
 bed = bed[0]
 #norm_bedgraph = norm_bedgraph[0]
 unnorm_bedgraph = unnorm_bedgraph[0]
+
 controlbeds = [x for x in glob.glob(bed + '/*.bed') if re.search('control', x)]
 controlbeds = sorted(controlbeds, key=lambda x: len(x))
+
+print("Identified contol bed files {}".format(controlbeds))
+
 rnaseqbeds = [x for x in glob.glob(bed + '/*.bed') if re.search('control', x)]
 rnaseqbeds = sorted(rnaseqbeds, key=lambda x: len(x))
+
 exp_beds = [x for x in glob.glob(bed + '/*.bed') if re.search('exp', x)]
+
 clip_reps = [x for x in glob.glob(unnorm_bedgraph + '/*.wig') if \
     re.search('fbf', x)]
 clip_reps = list(set([re.sub('_[\+-]\.wig', '.wig', x) for x in \
@@ -40,14 +56,20 @@ lib_folders = [x for x in folders if re.search('lib', x)]
 lib = '/groups/Kimble/Common/fog_iCLIP/calls/lib/'
 fasta = lib + 'mtDNA.fa'
 gtf = lib + 'gtf_with_names_column.txt'
+
 if len(lib_folders) > 0:
+
     lib_folder = sorted(lib_folders, key=lambda x: len(x))[0]
     lib = lib_folder
-    print [os.path.splitext(x) for x in glob.glob(lib + '/*')]
+
+    print([os.path.splitext(x) for x in glob.glob(lib + '/*')])
+
     fastas = [x for x in glob.glob(lib + '/*') if os.path.splitext(x)[1]=='.fa']
     fastas += [x for x in glob.glob(lib + '/*') if os.path.splitext(x)[1]=='.fas']
     fastas += [x for x in glob.glob(lib + '/*') if os.path.splitext(x)[1]=='.fasta']
+
     gtfs = [x for x in glob.glob(lib + '/*') if re.search('gtf', x)]
+
     if len(fastas) > 0:
         fasta = fastas[0]
     if len(gtfs) > 0:
@@ -93,5 +115,6 @@ cr2=clip_reps[1],
 cr3=clip_reps[2],
 seq=rnaseqbeds[0]
 )
-print li
-with open('auto.ini', 'w') as f: f.write(li)
+print(li)
+with open('auto.ini', 'w') as f:
+    f.write(li)

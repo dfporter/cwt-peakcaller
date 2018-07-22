@@ -67,9 +67,9 @@ def find_peaks(coverage, chrm='I', strand='+', config=None,
         coverage_array = np.fromiter(coverage[window], dtype=np.float)
         if use_raw_height_not_cwt:
             v = np.where(coverage_array >= use_raw_height_not_cwt,
-                         range(len(coverage_arrcay)), 0 * len(coverage_array))
-            for k, g in groupby(enumerate(v), lambda (i, x): i-x):
-                _range = map(itemgetter(1), g)
+                         list(range(len(coverage_arrcay))), 0 * len(coverage_array))
+            for k, g in groupby(enumerate(v), lambda i_x: i_x[0]-i_x[1]):
+                _range = list(map(itemgetter(1), g))
                 if len(_range) > 1 and _range[0] > 0:
                     _range = sorted(_range, key=lambda xpos: coverage_array[xpos])
                     peak_pos.append(start + _range[-1])
@@ -98,7 +98,7 @@ def find_peaks(coverage, chrm='I', strand='+', config=None,
 
 # From: http://stackoverflow.com/questions/17118350/how-to-find-nearest-value-that-is-greater-in-numpy-array
 def argfind(array, predicate):
-    for i in xrange(array.shape[0]):
+    for i in range(array.shape[0]):
         if predicate(array[i]):
             return i
     return False
@@ -134,7 +134,7 @@ def find_borders(peak_pos, coverage, chrm, strand):
         wincvg = np.fromiter(coverage[window], dtype='i')
         peak_obj.height = int(max(wincvg))
         if peak_obj.height == 'na':
-            print "Set a peak height to 'na': %s..." % str(peak_obj.__dict__)
+            print("Set a peak height to 'na': %s..." % str(peak_obj.__dict__))
         peak_objs.append(peak_obj)
     return peak_objs
 
@@ -195,7 +195,7 @@ def call_peaks_from_wig(coverage, fname, config, load_data=False):
     gtf_df = pandas.read_csv(gtf_filename, sep='\t')
     peaks_by_chrm = {}
     peak_objs_by_chrm = {}
-    for chrm in dict(gtf_df['0'].value_counts()).keys():
+    for chrm in list(dict(gtf_df['0'].value_counts()).keys()):
         peaks_by_chrm[chrm] = {}
         peak_objs_by_chrm[chrm] = {}
         try:
@@ -268,7 +268,7 @@ def load_bed_file(fname):
             s = line.rstrip('\n').split('\t')
             ga[HTSeq.GenomicInterval(
                 s[0], int(s[1]), int(s[2]), s[5])] += 1
-            if not n % 1e3: print "Loading {i}: line {n}.".format(i=fname, n=n)
+            if not n % 1e3: print("Loading {i}: line {n}.".format(i=fname, n=n))
     li = "\tTook %.3f m to read bed file." % float((time.time() - start_time)/60.)
     logger.info(li)
     return ga
@@ -360,7 +360,7 @@ def check_overlap(intervals):
         else:
             lower = merged[-1]
             if higher.left <= lower.right:
-                print "Overlapping peak ranges..\n%s\n%s\n*" % (str(lower), str(higher))
+                print("Overlapping peak ranges..\n%s\n%s\n*" % (str(lower), str(higher)))
 
 
 def get_distance_pandas(_gene, apeak):

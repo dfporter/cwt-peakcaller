@@ -58,30 +58,30 @@ def load_args():
 if __name__ == '__main__':
     args = load_args()
     lib = config.config(filepath=args.config)
-    print lib['clip_replicate']
+    print(lib['clip_replicate'])
     ga_raw = {}
-    print "\n".join(sorted([":".join([k, str(v)]) for k, v in lib.items()]))
+    print("\n".join(sorted([":".join([k, str(v)]) for k, v in list(lib.items())])))
     callpeaks.start_logger(lib['experiment_name'])
-    print "Loading bed files..."
+    print("Loading bed files...")
     ga_raw['neg_ip'] = peak_calling_tools.load_bed_file(lib['neg_ip_filename'])
     ga_raw['rna_seq'] = peak_calling_tools.load_bed_file(lib['rna_seq_filename'])
     for clip_replicate in lib['clip_replicate_bed']:
         ga_raw[clip_replicate] = peak_calling_tools.load_bed_file(clip_replicate)
 #        ga_raw[clip_replicate] = peak_calling_tools.load_bed_file(
 #            lib['bed_dir'] + '/' + os.path.basename(clip_replicate).partition('wig')[0] + 'bed')
-    print "Loading gtf..."
+    print("Loading gtf...")
     gtf_data = callpeaks.get_gtf(args, lib)
     if args.no_ui:
         callpeaks.call(args, lib, gtf_data, ga_raw, skip_nb=args.skip_nb)
-        print "Finished calling peaks. Exiting."
+        print("Finished calling peaks. Exiting.")
         sys.exit()
     while True:
         try:
             callpeaks.call(args, lib, gtf_data, ga_raw, skip_nb=args.skip_nb)
         except:
-            print "Error in callpeaks()."
-            print traceback.format_exc()
-        print "Hit enter to reload callpeaks(), CTRL-C to close."
+            print("Error in callpeaks().")
+            print(traceback.format_exc())
+        print("Hit enter to reload callpeaks(), CTRL-C to close.")
         sys.stdin.readline()
         reloaded = False
         while not reloaded:
@@ -93,11 +93,11 @@ if __name__ == '__main__':
                 reload(add_signal)
                 reload(peak)
                 reload(NBin)
-                print "Successfully recompiled callpeaks et al."
+                print("Successfully recompiled callpeaks et al.")
                 reloaded = True
             except:
-                print "Crash when trying to compile callpeaks."
-                print traceback.format_exc()
-            print "Hit enter to re-run the script, CTRL-C to close."
+                print("Crash when trying to compile callpeaks.")
+                print(traceback.format_exc())
+            print("Hit enter to re-run the script, CTRL-C to close.")
             sys.stdin.readline()
 

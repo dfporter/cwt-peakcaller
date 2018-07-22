@@ -30,7 +30,7 @@ def do_statistics(
         logger.warn('No peaks called!')
         return {}
     logger.info("Peak 1: %s" % str(peak_objs[0].__dict__))
-    for bedfile in bedfiles.values():
+    for bedfile in list(bedfiles.values()):
         if not os.path.exists(bedfile): logger.error('Expected file %s does not exist.' % bedfile)
     bedfile_sizes = read_bedfile_sizes(bedfiles)
     norm_factors = get_norm_files(bedfile_sizes)
@@ -87,7 +87,7 @@ def percentage_split(seq, percentages):
     cdf = np.cumsum(percentages)
     seq = sorted(seq)
     assert cdf[-1] == 1.0  # Test if percentages sum to 1.0
-    stops = map(int, cdf * len(seq))
+    stops = list(map(int, cdf * len(seq)))
     sep_l = [seq[a:b] for a,b in zip([0]+stops, stops)]
     return [np.median(x) for x in sep_l]
 
@@ -107,7 +107,7 @@ def get_norm_files(bedfile_sizes):
 def read_bedfile_sizes(bedfiles):
     bedfile_sizes = {}
     for bedfile in bedfiles:
-        print 'reading %s' % bedfile
+        print('reading %s' % bedfile)
         fname = bedfiles[bedfile]
         plus_file = fname.partition('.wig')[0] + '_+.wig'
         minus_file = fname.partition('.wig')[0] + '_-.wig'
@@ -176,7 +176,7 @@ def fdr_correction(config, peak_table, clip_replicate_filename, alpha=0.01):
             peak_table["%s_gene_nb_cor" % bamfile] = pandas.Series(
                 fdrs["%s_gene_nb" % bamfile][1], index=peak_table.index)
         except:
-            print "Skipping NB FDR calculations..."
+            print("Skipping NB FDR calculations...")
 
 def evaluate_hypothesis(peak_table, clip_bed_filename, config, alpha=0.01):
     '''Apply an FDR cutoff and write output files.

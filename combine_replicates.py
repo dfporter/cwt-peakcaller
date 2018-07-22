@@ -25,7 +25,7 @@ def combine_peaks_not_pandas(replicates, min_num_reps=1, output_dir='peaks/',
            the highest peak range in a given set of overlapping peaks.
     """
     # Convert to a list of dicts.
-    print 'combine_peaks_not_pandas'
+    print('combine_peaks_not_pandas')
     reps = collections.defaultdict(list)
     for rep in replicates:
         reps[rep] = replicates[rep].to_dict('records')   
@@ -48,7 +48,7 @@ def combine_peaks_not_pandas(replicates, min_num_reps=1, output_dir='peaks/',
         _ranges = get_ranges_not_pandas(by_gene, gene)
         overlapping = get_overlapping_not_pandas(
             _ranges, gene, min_num_reps=min_num_reps)
-        for peak_list in overlapping.values():
+        for peak_list in list(overlapping.values()):
             a_set = set([x[0] for x in peak_list])
             replicate_target_sets['all'].setdefault(gene, [])
             replicate_target_sets['all'][gene].append(a_set)
@@ -63,7 +63,7 @@ def combine_peaks_not_pandas(replicates, min_num_reps=1, output_dir='peaks/',
         for peak_name in overlapping:
             overlapping_peak_rows[gene].append(_ranges[peak_name[0]][peak_name])
     for label in ['all']:
-        repnames = reps.keys()
+        repnames = list(reps.keys())
         vennreps = collections.defaultdict(int)
         for gene in replicate_target_sets[label]:
             if len(replicate_target_sets[label][gene]) > 1:
