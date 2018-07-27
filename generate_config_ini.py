@@ -53,8 +53,8 @@ clip_reps = list(set([re.sub('_[\+-]\.wig', '.wig', x) for x in \
 #for rep in clip_reps:
 #    rep = re.sub('_[\+-].wig', '.wig', rep)
 lib_folders = [x for x in folders if re.search('lib', x)]
-lib = '/groups/Kimble/Common/fog_iCLIP/calls/lib/'
-fasta = lib + 'mtDNA.fa'
+lib = '/opt/lib/'
+fasta = lib + 'c_elegans.WS235.genomic.fa'
 gtf = lib + 'gtf_with_names_column.txt'
 
 if len(lib_folders) > 0:

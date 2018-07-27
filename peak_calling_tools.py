@@ -239,19 +239,27 @@ def convert_peak_objs_to_table(peak_objs_by_chrm):
 def load_bed_folder(folder_name, config=None):
     logger.info("Loading .bed files in %s/" % folder_name)
     ga = {}
+    
     if config is not None:
         exp_name = config['experiment_name']
         exp_name = re.sub('\w+', '', exp_name)  # Delete numbers for no reason.
+
     for fname in glob.glob(folder_name + '/*.bed'):
         exp = os.path.basename(fname).partition('.bed')[0]
-        if re.match('fog', exp) is not None: comb_exp = 'fog'
-        elif re.match('control', exp) is not None: comb_exp = 'control'
-        elif re.match('n2', exp) is not None: comb_exp = 'n2'
-	elif re.match('.*' + exp_name + '.*', exp) is not None:
+        if re.match('fog', exp) is not None:
+            comb_exp = 'fog'
+        elif re.match('control', exp) is not None:
+            comb_exp = 'control'
+        elif re.match('n2', exp) is not None:
+            comb_exp = 'n2'
+        elif re.match('.*' + exp_name + '.*', exp) is not None:
             comb_exp = exp_name
-        else: comb_exp = 'Unknown'
+        else:
+            comb_exp = 'Unknown'
+        
         ga.setdefault(exp, HTSeq.GenomicArrayOfSets(chroms='auto', stranded=True))
         ga[exp] = load_bed_file(fname)
+
     return ga
 
 

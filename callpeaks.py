@@ -278,6 +278,10 @@ def load_tables_of_cwt_peak_calls(config, args):
 
 
 def get_gtf(args, config):
+    
+    if not os.path.exists('lib/'):
+        os.system('mkdir lib')
+
     if args.load_gtf:
         with open('lib/gtf_as_dict.p', 'rb') as f:
             as_d = pickle.load(f)
